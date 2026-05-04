@@ -19,6 +19,7 @@ import (
 	"github.com/Gentleman-Programming/engram/internal/cloud/constants"
 	"github.com/Gentleman-Programming/engram/internal/cloud/dashboard"
 	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
 )
@@ -89,7 +90,7 @@ var newCloudRuntime = func(cfg cloud.Config) (cloudServerRuntime, error) {
 		return nil, err
 	}
 	projectAuth := auth.NewProjectScopeAuthorizer(allowedProjects)
-	token := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_TOKEN"))
+	token := envFirst(product.EnvCloudToken, product.LegacyEnvCloudToken)
 	cs.SetDashboardAllowedProjects(allowedProjects)
 	insecureNoAuth := token == "" && envBool("ENGRAM_CLOUD_INSECURE_NO_AUTH")
 	var authenticator cloudserver.Authenticator
@@ -637,7 +638,7 @@ func cmdCloudStatus(cfg store.Config) {
 }
 
 func printCloudStatusSyncDiagnostic(cfg store.Config) {
-	if _, err := os.Stat(filepath.Join(cfg.DataDir, "engram.db")); err != nil {
+	if _, err := os.Stat(filepath.Join(cfg.DataDir, product.DBFilename)); err != nil {
 		return
 	}
 	s, err := storeNew(cfg)
@@ -759,17 +760,17 @@ func cmdCloudServe() {
 }
 
 func validateCloudServeAuthConfig() error {
-	token := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_TOKEN"))
-	adminToken := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_ADMIN"))
+	token := envFirst(product.EnvCloudToken, product.LegacyEnvCloudToken)
+	adminToken := envFirst(product.EnvCloudAdmin, product.LegacyEnvCloudAdmin)
 	insecureNoAuth := envBool("ENGRAM_CLOUD_INSECURE_NO_AUTH")
 	allowlist := normalizeAllowedProjects(cloud.ConfigFromEnv().AllowedProjects)
-	jwtSecretEnv := strings.TrimSpace(os.Getenv("ENGRAM_JWT_SECRET"))
+	jwtSecretEnv := envFirst(product.EnvJWTSecret, product.LegacyEnvJWTSecret)
 	if insecureNoAuth && token != "" {
-		return fmt.Errorf("conflicting cloud auth configuration: ENGRAM_CLOUD_INSECURE_NO_AUTH=1 cannot be used together with ENGRAM_CLOUD_TOKEN")
+		return fmt.Errorf("conflicting cloud auth configuration: ENGRAM_CLOUD_INSECURE_NO_AUTH=1 cannot be used together with %s", product.EnvCloudToken)
 	}
 	if token != "" && len(allowlist) > 0 {
 		if jwtSecretEnv == "" {
-			return fmt.Errorf("authenticated cloud serve requires explicit ENGRAM_JWT_SECRET (non-default); refusing implicit default secret")
+			return fmt.Errorf("authenticated cloud serve requires explicit %s (non-default); refusing implicit default secret", product.EnvJWTSecret)
 		}
 		if cloud.IsDefaultJWTSecret(jwtSecretEnv) {
 			return fmt.Errorf("authenticated cloud serve requires a non-default ENGRAM_JWT_SECRET; refusing development default")
@@ -811,7 +812,7 @@ func normalizeAllowedProjects(projects []string) []string {
 }
 
 func cloudConfigPath(cfg store.Config) string {
-	return filepath.Join(cfg.DataDir, "cloud.json")
+	return filepath.Join(cfg.DataDir, product.CloudConfigFile)
 }
 
 func loadCloudConfig(cfg store.Config) (*cloudConfig, error) {

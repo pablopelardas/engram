@@ -6,7 +6,7 @@
 //     resolved absolute binary path so child processes never require PATH
 //     resolution in headless/systemd environments.
 //   - Claude Code: runs `claude plugin marketplace add` + `claude plugin install`,
-//     then writes a durable MCP config to ~/.claude/mcp/engram.json using the
+//     then writes a durable MCP config to ~/.claude/mcp/intuit-engram.json using the
 //     absolute binary path so the subprocess never needs PATH resolution.
 //   - Gemini CLI: injects MCP registration in ~/.gemini/settings.json
 //   - Codex: injects MCP registration in ~/.codex/config.toml
@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/Gentleman-Programming/engram/internal/mcp"
+	"github.com/Gentleman-Programming/engram/internal/product"
 )
 
 var (
@@ -445,7 +446,7 @@ func injectOpenCodeMCP() error {
 	}
 
 	// Check if engram is already registered
-	if _, exists := mcpBlock["engram"]; exists {
+	if _, exists := mcpBlock[product.Name]; exists {
 		return nil // already registered, nothing to do
 	}
 
@@ -461,7 +462,7 @@ func injectOpenCodeMCP() error {
 	if err != nil {
 		return fmt.Errorf("marshal engram entry: %w", err)
 	}
-	mcpBlock["engram"] = json.RawMessage(entryJSON)
+	mcpBlock[product.Name] = json.RawMessage(entryJSON)
 
 	// Write mcp block back to config
 	mcpJSON, err := jsonMarshalFn(mcpBlock)
@@ -589,7 +590,7 @@ func installClaudeCode() (*Result, error) {
 	}
 
 	// Step 2: Install the plugin
-	installOut, err := runCommand(claudeBin, "plugin", "install", "engram")
+	installOut, err := runCommand(claudeBin, "plugin", "install", product.LegacyName)
 	installOutputStr := strings.TrimSpace(string(installOut))
 	if err != nil {
 		// If plugin is already installed, that's fine
@@ -598,15 +599,15 @@ func installClaudeCode() (*Result, error) {
 		}
 	}
 
-	// Step 3: Write a durable user-level MCP config at ~/.claude/mcp/engram.json
+	// Step 3: Write a durable user-level MCP config at ~/.claude/mcp/intuit-engram.json
 	// with the absolute binary path. This survives plugin cache auto-updates and
 	// works on Windows where MCP subprocesses may not inherit PATH.
 	files := 0
 	if err := writeClaudeCodeUserMCPFn(); err != nil {
 		// Non-fatal: the plugin still works via the plugin cache .mcp.json.
 		// Warn so Windows users know to check their PATH if tools don't appear.
-		fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/engram.json): %v\n", err)
-		fmt.Fprintf(os.Stderr, "  The plugin is installed but MCP may not start on Windows if engram is not in PATH.\n")
+		fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/%s.json): %v\n", product.Name, err)
+		fmt.Fprintf(os.Stderr, "  The plugin is installed but MCP may not start on Windows if %s is not in PATH.\n", product.Name)
 	} else {
 		files = 1
 	}
@@ -625,13 +626,13 @@ func claudeCodeMCPDir() string {
 	return filepath.Join(home, ".claude", "mcp")
 }
 
-// claudeCodeUserMCPPath returns the path for the engram MCP config in the
+// claudeCodeUserMCPPath returns the path for the intuit-engram MCP config in the
 // user-level MCP directory.
 func claudeCodeUserMCPPath() string {
-	return filepath.Join(claudeCodeMCPDir(), "engram.json")
+	return filepath.Join(claudeCodeMCPDir(), product.Name+".json")
 }
 
-// writeClaudeCodeUserMCP writes ~/.claude/mcp/engram.json with the absolute
+// writeClaudeCodeUserMCP writes ~/.claude/mcp/intuit-engram.json with the absolute
 // path to the engram binary. This is idempotent — it always writes (overwrites)
 // so that if the binary moves (e.g. brew upgrade), running setup again fixes it.
 // Using os.Executable() instead of PATH lookup ensures the correct binary is
@@ -821,7 +822,7 @@ func injectGeminiMCP(configPath string) error {
 	if err != nil {
 		return fmt.Errorf("marshal engram entry: %w", err)
 	}
-	mcpServers["engram"] = json.RawMessage(entryJSON)
+	mcpServers[product.Name] = json.RawMessage(entryJSON)
 
 	mcpJSON, err := jsonMarshalFn(mcpServers)
 	if err != nil {
@@ -841,15 +842,15 @@ func injectGeminiMCP(configPath string) error {
 	return nil
 }
 
-// resolveEngramCommand returns the absolute path to the engram binary.
+// resolveEngramCommand returns the absolute path to the intuit-engram binary.
 // It uses os.Executable() so that headless/systemd environments (where PATH
 // is not reliably inherited by child processes) still find the binary.
 // EvalSymlinks makes the path stable across package-manager upgrades.
-// Falls back to bare "engram" only if os.Executable() itself fails.
+// Falls back to the product binary name only if os.Executable() itself fails.
 func resolveEngramCommand() string {
 	exe, err := osExecutable()
 	if err != nil {
-		return "engram" // fallback to PATH-based name
+		return product.Name // fallback to PATH-based name
 	}
 	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = resolved

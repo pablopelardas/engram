@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Gentleman-Programming/engram/internal/product"
 	sqlite "modernc.org/sqlite"
 )
 
@@ -429,7 +430,7 @@ func DefaultConfig() (Config, error) {
 		return Config{}, fmt.Errorf("engram: determine home directory: %w", err)
 	}
 	return Config{
-		DataDir:              filepath.Join(home, ".engram"),
+		DataDir:              filepath.Join(home, product.DataDirName),
 		MaxObservationLength: 50000,
 		MaxContextResults:    20,
 		MaxSearchResults:     20,
@@ -584,7 +585,7 @@ func New(cfg Config) (*Store, error) {
 		return nil, fmt.Errorf("engram: create data dir: %w", err)
 	}
 
-	dbPath := filepath.Join(cfg.DataDir, "engram.db")
+	dbPath := filepath.Join(cfg.DataDir, product.DBFilename)
 	db, err := openDB("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("engram: open database: %w", err)
@@ -625,7 +626,7 @@ func newWithoutRepair(cfg Config) (*Store, error) {
 		return nil, fmt.Errorf("engram: create data dir: %w", err)
 	}
 
-	dbPath := filepath.Join(cfg.DataDir, "engram.db")
+	dbPath := filepath.Join(cfg.DataDir, product.DBFilename)
 	db, err := openDB("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("engram: open database: %w", err)

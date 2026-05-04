@@ -4,6 +4,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/Gentleman-Programming/engram/internal/product"
 )
 
 type Config struct {
@@ -36,13 +38,19 @@ func IsDefaultJWTSecret(secret string) bool {
 
 func ConfigFromEnv() Config {
 	cfg := DefaultConfig()
-	if v := strings.TrimSpace(os.Getenv("ENGRAM_DATABASE_URL")); v != "" {
+	if v := strings.TrimSpace(os.Getenv(product.EnvDatabaseURL)); v != "" {
+		cfg.DSN = v
+	} else if v := strings.TrimSpace(os.Getenv(product.LegacyEnvDatabaseURL)); v != "" {
 		cfg.DSN = v
 	}
-	if v := strings.TrimSpace(os.Getenv("ENGRAM_JWT_SECRET")); v != "" {
+	if v := strings.TrimSpace(os.Getenv(product.EnvJWTSecret)); v != "" {
+		cfg.JWTSecret = v
+	} else if v := strings.TrimSpace(os.Getenv(product.LegacyEnvJWTSecret)); v != "" {
 		cfg.JWTSecret = v
 	}
-	if v := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_ADMIN")); v != "" {
+	if v := strings.TrimSpace(os.Getenv(product.EnvCloudAdmin)); v != "" {
+		cfg.AdminToken = v
+	} else if v := strings.TrimSpace(os.Getenv(product.LegacyEnvCloudAdmin)); v != "" {
 		cfg.AdminToken = v
 	}
 	if v := strings.TrimSpace(os.Getenv("ENGRAM_PORT")); v != "" {

@@ -1,0 +1,26 @@
+package product
+
+const (
+	Name                   = "intuit-engram"
+	LegacyName             = "engram"
+	DataDirName            = ".intuit-engram"
+	LegacyDataDirName      = ".engram"
+	DBFilename             = "intuit-engram.db"
+	LegacyDBFilename       = "engram.db"
+	CloudConfigFile        = "intuit-cloud.json"
+	LegacyCloudConfig      = "cloud.json"
+	EnvDataDir             = "INTUIT_ENGRAM_DATA_DIR"
+	LegacyEnvDataDir       = "ENGRAM_DATA_DIR"
+	EnvCloudServer         = "INTUIT_ENGRAM_CLOUD_SERVER"
+	LegacyEnvCloudServer   = "ENGRAM_CLOUD_SERVER"
+	EnvCloudToken          = "INTUIT_ENGRAM_CLOUD_TOKEN"
+	LegacyEnvCloudToken    = "ENGRAM_CLOUD_TOKEN"
+	EnvCloudAutosync       = "INTUIT_ENGRAM_CLOUD_AUTOSYNC"
+	LegacyEnvCloudAutosync = "ENGRAM_CLOUD_AUTOSYNC"
+	EnvDatabaseURL         = "INTUIT_ENGRAM_DATABASE_URL"
+	LegacyEnvDatabaseURL   = "ENGRAM_DATABASE_URL"
+	EnvCloudAdmin          = "INTUIT_ENGRAM_CLOUD_ADMIN"
+	LegacyEnvCloudAdmin    = "ENGRAM_CLOUD_ADMIN"
+	EnvJWTSecret           = "INTUIT_ENGRAM_JWT_SECRET"
+	LegacyEnvJWTSecret     = "ENGRAM_JWT_SECRET"
+)

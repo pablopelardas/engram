@@ -34,6 +34,7 @@ import (
 	"github.com/Gentleman-Programming/engram/internal/diagnostic"
 	"github.com/Gentleman-Programming/engram/internal/mcp"
 	"github.com/Gentleman-Programming/engram/internal/obsidian"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/project"
 	"github.com/Gentleman-Programming/engram/internal/server"
 	"github.com/Gentleman-Programming/engram/internal/setup"
@@ -437,6 +438,15 @@ func envBool(key string) bool {
 	return v == "1" || v == "true" || v == "yes" || v == "on"
 }
 
+func envFirst(keys ...string) string {
+	for _, key := range keys {
+		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func resolveCloudRuntimeConfig(cfg store.Config) (*cloudConfig, error) {
 	cc, err := loadCloudConfig(cfg)
 	if err != nil {
@@ -445,13 +455,17 @@ func resolveCloudRuntimeConfig(cfg store.Config) (*cloudConfig, error) {
 	if cc == nil {
 		cc = &cloudConfig{}
 	}
-	// Legacy persisted tokens in cloud.json are intentionally ignored at runtime.
-	// Runtime auth must come from ENGRAM_CLOUD_TOKEN.
+	// Persisted tokens in cloud config are intentionally ignored at runtime.
+	// Runtime auth must come from the dedicated cloud token env var.
 	cc.Token = ""
-	if v := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_SERVER")); v != "" {
+	if v := strings.TrimSpace(os.Getenv(product.EnvCloudServer)); v != "" {
+		cc.ServerURL = v
+	} else if v := strings.TrimSpace(os.Getenv(product.LegacyEnvCloudServer)); v != "" {
 		cc.ServerURL = v
 	}
-	if v := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_TOKEN")); v != "" {
+	if v := strings.TrimSpace(os.Getenv(product.EnvCloudToken)); v != "" {
+		cc.Token = v
+	} else if v := strings.TrimSpace(os.Getenv(product.LegacyEnvCloudToken)); v != "" {
 		cc.Token = v
 	}
 	return cc, nil
@@ -599,15 +613,17 @@ func main() {
 		// that os.UserHomeDir() might have missed (e.g. MCP subprocesses on
 		// Windows where %USERPROFILE% is not propagated).
 		if home := resolveHomeFallback(); home != "" {
-			log.Printf("[engram] UserHomeDir failed, using fallback: %s", home)
-			cfg = store.FallbackConfig(filepath.Join(home, ".engram"))
+			log.Printf("[%s] UserHomeDir failed, using fallback: %s", product.Name, home)
+			cfg = store.FallbackConfig(filepath.Join(home, product.DataDirName))
 		} else {
 			fatal(cfgErr)
 		}
 	}
 
 	// Allow overriding data dir via env
-	if dir := os.Getenv("ENGRAM_DATA_DIR"); dir != "" {
+	if dir := os.Getenv(product.EnvDataDir); dir != "" {
+		cfg.DataDir = dir
+	} else if dir := os.Getenv(product.LegacyEnvDataDir); dir != "" {
 		cfg.DataDir = dir
 	}
 
@@ -757,7 +773,7 @@ func cmdServe(cfg store.Config) {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		log.Println("[engram] shutting down...")
+		log.Printf("[%s] shutting down...", product.Name)
 		cancel()
 		if mgrStop != nil {
 			mgrStop() // BW7: wait for Manager to release lease before exiting
@@ -781,15 +797,15 @@ func resolveServeSyncStatusProject() string {
 	return strings.TrimSpace(projectName)
 }
 
-// tryStartAutosync starts the autosync Manager if ENGRAM_CLOUD_AUTOSYNC=1 and
-// both ENGRAM_CLOUD_TOKEN and ENGRAM_CLOUD_SERVER are present.
+// tryStartAutosync starts the autosync Manager if autosync env=1 and both
+// cloud token and server env vars are present.
 // REQ-210: only exact "1" is accepted. REQ-211: missing token/server → log+skip.
 // Never fatal — autosync is optional.
 // BW7: Returns (status provider, stop func) so the caller can invoke stop
 // before os.Exit to ensure the Manager releases its sync lease.
 func tryStartAutosync(ctx context.Context, s *store.Store, cfg store.Config) (autosyncStatusProvider, func()) {
 	// REQ-210: opt-in requires exact "1".
-	if strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_AUTOSYNC")) != "1" {
+	if envFirst(product.EnvCloudAutosync, product.LegacyEnvCloudAutosync) != "1" {
 		return nil, nil
 	}
 
@@ -804,12 +820,12 @@ func tryStartAutosync(ctx context.Context, s *store.Store, cfg store.Config) (au
 
 	// REQ-211: token required.
 	if token == "" {
-		log.Printf("[autosync] ERROR: ENGRAM_CLOUD_TOKEN is required when ENGRAM_CLOUD_AUTOSYNC=1; autosync disabled")
+		log.Printf("[autosync] ERROR: %s is required when %s=1; autosync disabled", product.EnvCloudToken, product.EnvCloudAutosync)
 		return nil, nil
 	}
 	// REQ-211: server URL required.
 	if serverURL == "" {
-		log.Printf("[autosync] ERROR: ENGRAM_CLOUD_SERVER is required when ENGRAM_CLOUD_AUTOSYNC=1; autosync disabled")
+		log.Printf("[autosync] ERROR: %s is required when %s=1; autosync disabled", product.EnvCloudServer, product.EnvCloudAutosync)
 		return nil, nil
 	}
 
@@ -1147,12 +1163,12 @@ func cmdStats(cfg store.Config) {
 		projects = strings.Join(stats.Projects, ", ")
 	}
 
-	fmt.Printf("Engram Memory Stats\n")
+	fmt.Printf("%s Memory Stats\n", product.Name)
 	fmt.Printf("  Sessions:     %d\n", stats.TotalSessions)
 	fmt.Printf("  Observations: %d\n", stats.TotalObservations)
 	fmt.Printf("  Prompts:      %d\n", stats.TotalPrompts)
 	fmt.Printf("  Projects:     %s\n", projects)
-	fmt.Printf("  Database:     %s/engram.db\n", cfg.DataDir)
+	fmt.Printf("  Database:     %s/%s\n", cfg.DataDir, product.DBFilename)
 }
 
 func cmdExport(cfg store.Config) {
@@ -2292,7 +2308,9 @@ Commands:
   help               Show this help
 
 Environment:
-  ENGRAM_DATA_DIR    Override data directory (default: ~/.engram)
+  INTUIT_ENGRAM_DATA_DIR
+	                     Override data directory (default: ~/.intuit-engram)
+  ENGRAM_DATA_DIR    Legacy override for compatibility
   ENGRAM_PORT        Override HTTP server port (default: 7437)
   ENGRAM_PROJECT     Default project hint for serve sync status fallback
   ENGRAM_DATABASE_URL
@@ -2314,9 +2332,9 @@ Environment:
 MCP Configuration (add to your agent's config):
   {
     "mcp": {
-      "engram": {
+      "intuit-engram": {
         "type": "stdio",
-        "command": "engram",
+        "command": "intuit-engram",
         "args": ["mcp", "--tools=agent"]
       }
     }
@@ -2325,7 +2343,7 @@ MCP Configuration (add to your agent's config):
 }
 
 func fatal(err error) {
-	fmt.Fprintf(os.Stderr, "engram: %s\n", err)
+	fmt.Fprintf(os.Stderr, "%s: %s\n", product.Name, err)
 	exitFunc(1)
 }
 
@@ -2361,7 +2379,7 @@ func resolveHomeFallback() string {
 // locations (e.g. drive root on Windows when UserHomeDir failed silently)
 // and moves them to the correct location if the correct location has no DB.
 func migrateOrphanedDB(correctDir string) {
-	correctDB := filepath.Join(correctDir, "engram.db")
+	correctDB := filepath.Join(correctDir, product.DBFilename)
 
 	// If the correct DB already exists, nothing to migrate.
 	if _, err := os.Stat(correctDB); err == nil {
@@ -2371,14 +2389,14 @@ func migrateOrphanedDB(correctDir string) {
 	// Known wrong locations: relative ".engram" resolved from common roots.
 	// On Windows this typically ends up at C:\.engram or D:\.engram.
 	candidates := []string{
-		filepath.Join(string(filepath.Separator), ".engram", "engram.db"),
+		filepath.Join(string(filepath.Separator), product.LegacyDataDirName, product.LegacyDBFilename),
 	}
 
 	// On Windows, check all drive letter roots.
 	if filepath.Separator == '\\' {
 		for _, drive := range "CDEFGHIJ" {
 			candidates = append(candidates,
-				filepath.Join(string(drive)+":\\", ".engram", "engram.db"),
+				filepath.Join(string(drive)+":\\", product.LegacyDataDirName, product.LegacyDBFilename),
 			)
 		}
 	}
@@ -2393,7 +2411,7 @@ func migrateOrphanedDB(correctDir string) {
 		}
 
 		// Found an orphaned DB — migrate it.
-		log.Printf("[engram] found orphaned database at %s, migrating to %s", candidate, correctDB)
+		log.Printf("[%s] found orphaned legacy database at %s, migrating to %s", product.Name, candidate, correctDB)
 
 		if err := os.MkdirAll(correctDir, 0755); err != nil {
 			log.Printf("[engram] migration failed (create dir): %v", err)
