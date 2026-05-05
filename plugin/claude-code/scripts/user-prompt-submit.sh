@@ -51,7 +51,7 @@ sanitize_session_key_part() {
 }
 
 print_toolsearch_message() {
-  printf '%s\n' '{"systemMessage":"CRITICAL FIRST ACTION — Execute this ToolSearch NOW before responding to the user:\nselect:mcp__engram__mem_save,mcp__engram__mem_search,mcp__engram__mem_context,mcp__engram__mem_session_summary,mcp__engram__mem_session_start,mcp__engram__mem_session_end,mcp__engram__mem_get_observation,mcp__engram__mem_suggest_topic_key,mcp__engram__mem_capture_passive,mcp__engram__mem_save_prompt,mcp__engram__mem_update,mcp__engram__mem_current_project,mcp__engram__mem_judge\n\nAfter loading tools, call mem_context to check for prior session history before responding."}'
+  printf '%s\n' '{"systemMessage":"CRITICAL FIRST ACTION — Execute this ToolSearch NOW before responding to the user:\nselect:mcp__intuit-engram__mem_save,mcp__intuit-engram__mem_search,mcp__intuit-engram__mem_context,mcp__intuit-engram__mem_session_summary,mcp__intuit-engram__mem_session_start,mcp__intuit-engram__mem_session_end,mcp__intuit-engram__mem_get_observation,mcp__intuit-engram__mem_suggest_topic_key,mcp__intuit-engram__mem_capture_passive,mcp__intuit-engram__mem_save_prompt,mcp__intuit-engram__mem_update,mcp__intuit-engram__mem_current_project,mcp__intuit-engram__mem_judge\n\nAfter loading tools, call mem_context to check for prior session history before responding."}'
 }
 
 if is_windows_bash && [ "${ENGRAM_CLAUDE_WINDOWS_BASH_SAFE_MODE:-auto}" != "0" ]; then
@@ -64,9 +64,9 @@ if is_windows_bash && [ "${ENGRAM_CLAUDE_WINDOWS_BASH_SAFE_MODE:-auto}" != "0" ]
   SESSION_ID="$JSON_VALUE"
   if [ -n "$SESSION_ID" ]; then
     sanitize_session_key_part "$SESSION_ID"
-    SESSION_KEY="engram-claude-${JSON_VALUE}-tools-loaded"
+    SESSION_KEY="intuit-engram-claude-${JSON_VALUE}-tools-loaded"
   else
-    SESSION_KEY="engram-claude-windows-$$-tools-loaded"
+    SESSION_KEY="intuit-engram-claude-windows-$$-tools-loaded"
   fi
   STATE_DIR="${TMPDIR:-/tmp}"
   STATE_FILE="${STATE_DIR}/${SESSION_KEY}"
@@ -140,12 +140,12 @@ OUTPUT="{}"
 
 # Build a stable session key — prefer SESSION_ID, fall back to project name
 if [ -n "$SESSION_ID" ]; then
-  SESSION_KEY="engram-claude-${SESSION_ID}-tools-loaded"
+  SESSION_KEY="intuit-engram-claude-${SESSION_ID}-tools-loaded"
 else
   # No session ID available — only then detect project for the fallback state key.
   PROJECT=$(detect_project "$CWD")
   SAFE_PROJECT=$(printf '%s' "${PROJECT:-unknown}" | tr -cs 'a-zA-Z0-9_-' '_')
-  SESSION_KEY="engram-claude-${SAFE_PROJECT}-$$-tools-loaded"
+  SESSION_KEY="intuit-engram-claude-${SAFE_PROJECT}-$$-tools-loaded"
 fi
 
 STATE_FILE="/tmp/${SESSION_KEY}"

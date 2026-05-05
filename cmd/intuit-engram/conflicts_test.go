@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 	versioncheck "github.com/Gentleman-Programming/engram/internal/version"
 	_ "modernc.org/sqlite"
@@ -60,11 +61,11 @@ func versionCheckResult() versioncheck.CheckResult {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-// openTestDB opens the engram.db file directly for low-level seeding operations
+// openTestDB opens the DB file directly for low-level seeding operations
 // that have no public Store API (e.g. deferred rows with arbitrary status/payload).
 func openTestDB(t *testing.T, cfg store.Config) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, "engram.db"))
+	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, product.DBFilename))
 	if err != nil {
 		t.Fatalf("openTestDB: %v", err)
 	}

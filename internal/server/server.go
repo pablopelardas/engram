@@ -815,7 +815,8 @@ func (s *Server) handleListDeferred(w http.ResponseWriter, r *http.Request) {
 
 // handleScanConflicts serves POST /conflicts/scan
 // Body: {"project":"X","since":"...","apply":bool,"max_insert":int,
-//        "semantic":bool,"concurrency":int,"timeout_per_call_seconds":int,"max_semantic":int}
+//
+//	"semantic":bool,"concurrency":int,"timeout_per_call_seconds":int,"max_semantic":int}
 func (s *Server) handleScanConflicts(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Project   string `json:"project"`

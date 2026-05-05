@@ -275,30 +275,31 @@ func Install(agentName string) (*Result, error) {
 //
 // Original line in source:
 //
-//	const ENGRAM_BIN = process.env.ENGRAM_BIN ?? "engram"
+//	const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? "intuit-engram"
 //
 // Patched line in installed copy:
 //
-//	const ENGRAM_BIN = process.env.ENGRAM_BIN ?? Bun.which("engram") ?? "/abs/path/engram"
+//	const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? Bun.which("engram") ?? "/abs/path/engram"
 //
 // Priority (left to right, first truthy wins):
-//  1. ENGRAM_BIN env var — explicit user override, always respected.
-//  2. Bun.which("engram") — runtime PATH lookup; works in interactive shells.
-//  3. Absolute baked-in path — works in headless/systemd where PATH is stripped.
+//  1. INTUIT_ENGRAM_BIN env var — explicit product override, always respected.
+//  2. ENGRAM_BIN env var — legacy explicit user override.
+//  3. Bun.which("engram") — runtime PATH lookup; works in interactive shells.
+//  4. Absolute baked-in path — works in headless/systemd where PATH is stripped.
 //
-// If absBin is already bare "engram" (os.Executable fallback) we don't add it
+// If absBin is already bare product.Name (os.Executable fallback) we don't add it
 // as the third fallback because it would be redundant with Bun.which("engram").
 func patchEngramBINLine(src []byte, absBin string) []byte {
-	const marker = `const ENGRAM_BIN = process.env.ENGRAM_BIN ?? "engram"`
+	const marker = `const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? "intuit-engram"`
 
 	var replacement string
-	if absBin == "engram" {
+	if absBin == product.Name {
 		// os.Executable failed — add Bun.which but no baked-in absolute path
-		replacement = `const ENGRAM_BIN = process.env.ENGRAM_BIN ?? Bun.which("engram") ?? "engram"`
+		replacement = `const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? Bun.which("engram") ?? "intuit-engram"`
 	} else {
 		// Normal case: bake in the absolute path as final fallback
 		replacement = fmt.Sprintf(
-			`const ENGRAM_BIN = process.env.ENGRAM_BIN ?? Bun.which("engram") ?? %q`,
+			`const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? Bun.which("engram") ?? %q`,
 			absBin,
 		)
 	}
@@ -337,7 +338,7 @@ func installOpenCode() (*Result, error) {
 		cmd := resolveEngramCommand()
 		fmt.Fprintf(os.Stderr, "warning: could not auto-register MCP server in opencode.json: %v\n", err)
 		fmt.Fprintf(os.Stderr, "  Add manually to your opencode.json under \"mcp\":\n")
-		fmt.Fprintf(os.Stderr, "  \"engram\": { \"type\": \"local\", \"command\": [%q, \"mcp\", \"--tools=agent\"], \"enabled\": true }\n", cmd)
+		fmt.Fprintf(os.Stderr, "  \"%s\": { \"type\": \"local\", \"command\": [%q, \"mcp\", \"--tools=agent\"], \"enabled\": true }\n", product.Name, cmd)
 	} else {
 		files++
 	}

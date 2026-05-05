@@ -12,6 +12,7 @@ import (
 
 	"github.com/Gentleman-Programming/engram/internal/mcp"
 	"github.com/Gentleman-Programming/engram/internal/obsidian"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/setup"
 	"github.com/Gentleman-Programming/engram/internal/store"
 	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
@@ -77,6 +78,19 @@ func captureOutput(t *testing.T, fn func()) (stdout string, stderr string) {
 	os.Stdout = outW
 	os.Stderr = errW
 
+	// Read from pipes in goroutines so fn() can write arbitrarily
+	// large output without deadlocking on the pipe buffer.
+	outCh := make(chan []byte, 1)
+	errCh := make(chan []byte, 1)
+	go func() {
+		b, _ := io.ReadAll(outR)
+		outCh <- b
+	}()
+	go func() {
+		b, _ := io.ReadAll(errR)
+		errCh <- b
+	}()
+
 	fn()
 
 	_ = outW.Close()
@@ -84,14 +98,8 @@ func captureOutput(t *testing.T, fn func()) (stdout string, stderr string) {
 	os.Stdout = oldOut
 	os.Stderr = oldErr
 
-	outBytes, err := io.ReadAll(outR)
-	if err != nil {
-		t.Fatalf("read stdout: %v", err)
-	}
-	errBytes, err := io.ReadAll(errR)
-	if err != nil {
-		t.Fatalf("read stderr: %v", err)
-	}
+	outBytes := <-outCh
+	errBytes := <-errCh
 
 	return string(outBytes), string(errBytes)
 }
@@ -493,7 +501,7 @@ func TestCmdContextAndStats(t *testing.T) {
 	if statsErr != "" {
 		t.Fatalf("expected no stderr from stats, got: %q", statsErr)
 	}
-	if !strings.Contains(statsOut, "Engram Memory Stats") || !strings.Contains(statsOut, "project-x") {
+	if !strings.Contains(statsOut, product.Name+" Memory Stats") || !strings.Contains(statsOut, "project-x") {
 		t.Fatalf("unexpected stats output: %q", statsOut)
 	}
 }

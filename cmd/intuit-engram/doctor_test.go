@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	engrammcp "github.com/Gentleman-Programming/engram/internal/mcp"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 	mcppkg "github.com/mark3labs/mcp-go/mcp"
 	_ "modernc.org/sqlite"
@@ -52,7 +53,7 @@ func newDoctorGitRepo(t *testing.T, name string) string {
 
 func seedDoctorPendingMutation(t *testing.T, cfg store.Config, project, entity, entityKey, op, payload string) {
 	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, "engram.db"))
+	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, product.DBFilename))
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}
@@ -168,7 +169,7 @@ func decodeRepairPlan(t *testing.T, out string) map[string]any {
 
 func assertDoctorRepairProject(t *testing.T, cfg store.Config, sessionID, wantProject string) {
 	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, "engram.db"))
+	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, product.DBFilename))
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}

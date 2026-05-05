@@ -20,6 +20,7 @@ import (
 	"github.com/Gentleman-Programming/engram/internal/cloud/constants"
 	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
 	"github.com/Gentleman-Programming/engram/internal/mcp"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	engramsrv "github.com/Gentleman-Programming/engram/internal/server"
 	"github.com/Gentleman-Programming/engram/internal/setup"
 	"github.com/Gentleman-Programming/engram/internal/store"
@@ -546,7 +547,7 @@ func TestCloudCommandIsolationDoesNotMutateLocalState(t *testing.T) {
 	t.Setenv("HOME", tmpHome)
 
 	cfg := testConfig(t)
-	cfg.DataDir = filepath.Join(tmpHome, ".engram")
+			cfg.DataDir = filepath.Join(tmpHome, product.DataDirName)
 
 	withArgs(t, "engram", "cloud", "status")
 	_, _, recovered := captureOutputAndRecover(t, func() { cmdCloud(cfg) })
@@ -554,11 +555,11 @@ func TestCloudCommandIsolationDoesNotMutateLocalState(t *testing.T) {
 		t.Fatalf("cloud status should not exit: %v", recovered)
 	}
 
-	if _, err := os.Stat(filepath.Join(cfg.DataDir, "engram.db")); err == nil {
+	if _, err := os.Stat(filepath.Join(cfg.DataDir, product.DBFilename)); err == nil {
 		t.Fatalf("cloud status should not create local database")
 	}
 
-	if _, err := os.Stat(filepath.Join(cfg.DataDir, "cloud.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(cfg.DataDir, product.CloudConfigFile)); err == nil {
 		t.Fatalf("cloud status should not mutate cloud config")
 	}
 }
@@ -621,7 +622,7 @@ func TestCloudEnrollAndSyncHelpDoNotMutateLocalState(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpHome := t.TempDir()
 			cfg := testConfig(t)
-			cfg.DataDir = filepath.Join(tmpHome, ".engram")
+			cfg.DataDir = filepath.Join(tmpHome, product.DataDirName)
 
 			withArgs(t, tc.args...)
 			stdout, stderr, recovered := captureOutputAndRecover(t, func() { tc.run(cfg) })
@@ -631,7 +632,7 @@ func TestCloudEnrollAndSyncHelpDoNotMutateLocalState(t *testing.T) {
 			if !strings.Contains(stdout, "usage:") {
 				t.Fatalf("expected usage output, got %q", stdout)
 			}
-			if _, err := os.Stat(filepath.Join(cfg.DataDir, "engram.db")); err == nil {
+			if _, err := os.Stat(filepath.Join(cfg.DataDir, product.DBFilename)); err == nil {
 				t.Fatalf("help should not create local database")
 			}
 		})
@@ -655,7 +656,7 @@ func TestUpdateChecksSkipCriticalStartupCommands(t *testing.T) {
 
 func TestMainCloudHelpDoesNotCreateLocalDatabase(t *testing.T) {
 	stubRuntimeHooks(t)
-	dataDir := filepath.Join(t.TempDir(), ".engram")
+	dataDir := filepath.Join(t.TempDir(), product.DataDirName)
 	t.Setenv("ENGRAM_DATA_DIR", dataDir)
 	withArgs(t, "engram", "cloud", "--help")
 
@@ -663,10 +664,10 @@ func TestMainCloudHelpDoesNotCreateLocalDatabase(t *testing.T) {
 	if recovered != nil || stderr != "" {
 		t.Fatalf("cloud help should return cleanly, panic=%v stderr=%q stdout=%q", recovered, stderr, stdout)
 	}
-	if !strings.Contains(stdout, "usage: engram cloud") {
+	if !strings.Contains(stdout, "usage: intuit-engram cloud") {
 		t.Fatalf("expected cloud usage output, got %q", stdout)
 	}
-	if _, err := os.Stat(filepath.Join(dataDir, "engram.db")); err == nil {
+	if _, err := os.Stat(filepath.Join(dataDir, product.DBFilename)); err == nil {
 		t.Fatal("cloud help should not create local database")
 	}
 }
@@ -806,7 +807,7 @@ func TestCmdCloudUpgradeDoctorRequiresProjectAndIsDeterministic(t *testing.T) {
 		}
 		_ = s.Close()
 
-		db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, "engram.db"))
+		db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, product.DBFilename))
 		if err != nil {
 			t.Fatalf("open raw db: %v", err)
 		}
@@ -888,7 +889,7 @@ func TestCmdSyncCloudPreflightsLegacyMutationPayloads(t *testing.T) {
 	}
 	_ = s.Close()
 
-	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, "engram.db"))
+	db, err := sql.Open("sqlite", filepath.Join(cfg.DataDir, product.DBFilename))
 	if err != nil {
 		t.Fatalf("open raw db: %v", err)
 	}
@@ -1055,7 +1056,7 @@ func TestCmdCloudUpgradeRepairStatusAndRollbackBranches(t *testing.T) {
 		if _, ok := recovered.(exitCode); !ok {
 			t.Fatalf("expected fatal exit for missing --project, got %v", recovered)
 		}
-		if !strings.Contains(stderr, "usage: engram cloud upgrade repair") || !strings.Contains(stderr, "--project") {
+		if !strings.Contains(stderr, "usage: intuit-engram cloud upgrade repair") || !strings.Contains(stderr, "--project") {
 			t.Fatalf("expected usage guidance with --project, got %q", stderr)
 		}
 	})
@@ -1155,7 +1156,7 @@ func TestCmdCloudUpgradeRepairStatusAndRollbackBranches(t *testing.T) {
 		if !strings.Contains(stdout, "stage: rolled_back") {
 			t.Fatalf("expected rolled_back stage output, got %q", stdout)
 		}
-		data, err := os.ReadFile(filepath.Join(cfg.DataDir, "cloud.json"))
+		data, err := os.ReadFile(filepath.Join(cfg.DataDir, product.CloudConfigFile))
 		if err != nil {
 			t.Fatalf("expected restored cloud config file: %v", err)
 		}
@@ -1195,7 +1196,7 @@ func TestCmdCloudUpgradeRepairStatusAndRollbackBranches(t *testing.T) {
 		if !strings.Contains(stdout, "stage: rolled_back") {
 			t.Fatalf("expected rolled_back stage output, got %q", stdout)
 		}
-		if _, err := os.Stat(filepath.Join(cfg.DataDir, "cloud.json")); !errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(filepath.Join(cfg.DataDir, product.CloudConfigFile)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("expected cloud config to be removed, err=%v", err)
 		}
 	})
@@ -1468,13 +1469,13 @@ func TestCmdCloudStatusRejectsInvalidEffectiveRuntimeServerURL(t *testing.T) {
 
 func TestResolveCloudRuntimeConfigReturnsErrorWhenPersistedConfigUnreadable(t *testing.T) {
 	cfg := testConfig(t)
-	if err := os.WriteFile(filepath.Join(cfg.DataDir, "cloud.json"), []byte("{invalid-json"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.DataDir, product.CloudConfigFile), []byte("{invalid-json"), 0644); err != nil {
 		t.Fatalf("write invalid cloud config: %v", err)
 	}
 
 	runtimeCfg, err := resolveCloudRuntimeConfig(cfg)
 	if err == nil {
-		t.Fatal("expected cloud runtime config error for malformed cloud.json")
+		t.Fatal("expected cloud runtime config error for malformed " + product.CloudConfigFile)
 	}
 	if !strings.Contains(err.Error(), "read cloud config") {
 		t.Fatalf("expected read cloud config context, got %v", err)
@@ -1562,7 +1563,7 @@ func TestCmdCloudStatusSurfacesCloudConfigParseError(t *testing.T) {
 	stubRuntimeHooks(t)
 
 	cfg := testConfig(t)
-	if err := os.WriteFile(filepath.Join(cfg.DataDir, "cloud.json"), []byte("{invalid-json"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.DataDir, product.CloudConfigFile), []byte("{invalid-json"), 0644); err != nil {
 		t.Fatalf("write invalid cloud config: %v", err)
 	}
 
@@ -1786,7 +1787,7 @@ func TestUnconfiguredCloudKeepsLocalCommandDefaults(t *testing.T) {
 	if code, ok := recovered.(exitCode); !ok || int(code) != 1 {
 		t.Fatalf("search missing query should keep exit code 1, got %v", recovered)
 	}
-	if !strings.Contains(searchErr, "usage: engram search <query>") {
+	if !strings.Contains(searchErr, "usage: intuit-engram search <query>") {
 		t.Fatalf("unexpected search usage: %q", searchErr)
 	}
 
@@ -2187,7 +2188,7 @@ func TestStoreSyncStatusProviderPrefersCloudConfigErrorOverPersistedState(t *tes
 	if err := s.MarkSyncFailure(targetKey, "stale network timeout", time.Now().UTC().Add(30*time.Second)); err != nil {
 		t.Fatalf("seed stale degraded sync state: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(cfg.DataDir, "cloud.json"), []byte("{invalid-json"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.DataDir, product.CloudConfigFile), []byte("{invalid-json"), 0644); err != nil {
 		t.Fatalf("write invalid cloud config: %v", err)
 	}
 
@@ -2318,23 +2319,23 @@ func TestCmdExportDefaultAndCmdImportErrors(t *testing.T) {
 	if recovered != nil || stderr != "" {
 		t.Fatalf("export default should succeed, panic=%v stderr=%q", recovered, stderr)
 	}
-	if !strings.Contains(stdout, "Exported to engram-export.json") {
+	if !strings.Contains(stdout, "Exported to "+product.ExportFilename) {
 		t.Fatalf("unexpected default export output: %q", stdout)
 	}
-	if _, err := os.Stat(filepath.Join(workDir, "engram-export.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(workDir, product.ExportFilename)); err != nil {
 		t.Fatalf("expected default export file: %v", err)
 	}
 
 	badPath := filepath.Join(workDir, "missing", "out.json")
 	withArgs(t, "engram", "export", badPath)
 	_, stderr, recovered = captureOutputAndRecover(t, func() { cmdExport(cfg) })
-	if _, ok := recovered.(exitCode); !ok || !strings.Contains(stderr, "no such file or directory") {
+	if _, ok := recovered.(exitCode); !ok || (!strings.Contains(stderr, "no such file or directory") && !strings.Contains(stderr, "The system cannot find the path specified")) {
 		t.Fatalf("expected export write fatal, panic=%v stderr=%q", recovered, stderr)
 	}
 
 	withArgs(t, "engram", "import")
 	_, stderr, recovered = captureOutputAndRecover(t, func() { cmdImport(cfg) })
-	if _, ok := recovered.(exitCode); !ok || !strings.Contains(stderr, "usage: engram import") {
+	if _, ok := recovered.(exitCode); !ok || !strings.Contains(stderr, "usage: intuit-engram import") {
 		t.Fatalf("expected import usage exit, panic=%v stderr=%q", recovered, stderr)
 	}
 
@@ -2442,10 +2443,10 @@ func TestUsageAndValidationExits(t *testing.T) {
 		errSubstr  string
 		stderrOnly bool
 	}{
-		{name: "search usage", args: []string{"engram", "search"}, run: cmdSearch, errSubstr: "usage: engram search"},
+		{name: "search usage", args: []string{"intuit-engram", "search"}, run: cmdSearch, errSubstr: "usage: intuit-engram search"},
 		{name: "search missing query", args: []string{"engram", "search", "--limit", "3"}, run: cmdSearch, errSubstr: "search query is required"},
-		{name: "save usage", args: []string{"engram", "save", "title"}, run: cmdSave, errSubstr: "usage: engram save"},
-		{name: "timeline usage", args: []string{"engram", "timeline"}, run: cmdTimeline, errSubstr: "usage: engram timeline"},
+		{name: "save usage", args: []string{"intuit-engram", "save", "title"}, run: cmdSave, errSubstr: "usage: intuit-engram save"},
+		{name: "timeline usage", args: []string{"intuit-engram", "timeline"}, run: cmdTimeline, errSubstr: "usage: intuit-engram timeline"},
 		{name: "timeline invalid id", args: []string{"engram", "timeline", "abc"}, run: cmdTimeline, errSubstr: "invalid observation id"},
 	}
 
@@ -2536,10 +2537,10 @@ func TestCmdSyncAdditionalBranches(t *testing.T) {
 		withCwd(t, workDir)
 		cfg := testConfig(t)
 
-		if err := os.MkdirAll(filepath.Join(workDir, ".engram"), 0755); err != nil {
-			t.Fatalf("mkdir .engram: %v", err)
+		if err := os.MkdirAll(filepath.Join(workDir, product.SyncDirName), 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", product.SyncDirName, err)
 		}
-		if err := os.WriteFile(filepath.Join(workDir, ".engram", "manifest.json"), []byte("{bad json"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workDir, product.SyncDirName, "manifest.json"), []byte("{bad json"), 0644); err != nil {
 			t.Fatalf("write manifest: %v", err)
 		}
 
@@ -2558,10 +2559,10 @@ func TestCmdSyncAdditionalBranches(t *testing.T) {
 		withCwd(t, workDir)
 		cfg := testConfig(t)
 
-		if err := os.MkdirAll(filepath.Join(workDir, ".engram"), 0755); err != nil {
-			t.Fatalf("mkdir .engram: %v", err)
+		if err := os.MkdirAll(filepath.Join(workDir, product.SyncDirName), 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", product.SyncDirName, err)
 		}
-		if err := os.WriteFile(filepath.Join(workDir, ".engram", "manifest.json"), []byte("{bad json"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workDir, product.SyncDirName, "manifest.json"), []byte("{bad json"), 0644); err != nil {
 			t.Fatalf("write manifest: %v", err)
 		}
 
@@ -2580,10 +2581,10 @@ func TestCmdSyncAdditionalBranches(t *testing.T) {
 		withCwd(t, workDir)
 		cfg := testConfig(t)
 
-		if err := os.MkdirAll(filepath.Join(workDir, ".engram"), 0755); err != nil {
-			t.Fatalf("mkdir .engram: %v", err)
+		if err := os.MkdirAll(filepath.Join(workDir, product.SyncDirName), 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", product.SyncDirName, err)
 		}
-		if err := os.WriteFile(filepath.Join(workDir, ".engram", "manifest.json"), []byte("{bad json"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workDir, product.SyncDirName, "manifest.json"), []byte("{bad json"), 0644); err != nil {
 			t.Fatalf("write manifest: %v", err)
 		}
 
@@ -2635,7 +2636,7 @@ func TestCmdSyncCloudPreflightSurfacesCloudConfigParseError(t *testing.T) {
 	withCwd(t, workDir)
 
 	cfg := testConfig(t)
-	if err := os.WriteFile(filepath.Join(cfg.DataDir, "cloud.json"), []byte("{invalid-json"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.DataDir, product.CloudConfigFile), []byte("{invalid-json"), 0644); err != nil {
 		t.Fatalf("write invalid cloud config: %v", err)
 	}
 
@@ -3680,10 +3681,10 @@ func TestCmdSyncImportEmptyAndMixedChunks(t *testing.T) {
 		withCwd(t, workDir)
 		cfg := testConfig(t)
 
-		if err := os.MkdirAll(filepath.Join(workDir, ".engram"), 0755); err != nil {
-			t.Fatalf("mkdir .engram: %v", err)
+		if err := os.MkdirAll(filepath.Join(workDir, product.SyncDirName), 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", product.SyncDirName, err)
 		}
-		if err := os.WriteFile(filepath.Join(workDir, ".engram", "manifest.json"), []byte(`{"version":1,"chunks":[]}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workDir, product.SyncDirName, "manifest.json"), []byte(`{"version":1,"chunks":[]}`), 0644); err != nil {
 			t.Fatalf("write manifest: %v", err)
 		}
 

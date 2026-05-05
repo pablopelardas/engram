@@ -15,15 +15,17 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Gentleman-Programming/engram/internal/product"
 )
 
 // ErrAmbiguousProject is returned when the working directory is a parent of
 // multiple git repositories and we cannot auto-select one.
 var ErrAmbiguousProject = errors.New("ambiguous project: multiple git repos found in cwd")
 
-// ErrInvalidConfig is returned when .engram/config.json exists but cannot be
+// ErrInvalidConfig is returned when the project memory config exists but cannot be
 // used as a project write lock.
-var ErrInvalidConfig = errors.New("invalid .engram/config.json")
+var ErrInvalidConfig = errors.New("invalid .intuit-engram/config.json")
 
 // Source constants describe how the project name was resolved.
 const (
@@ -38,7 +40,7 @@ const (
 	// project from the ambiguity result's available_projects list.
 	SourceUserSelectedAfterAmbiguousProject = "user_selected_after_ambiguous_project"
 	SourceRequestBody                       = "request_body" // REQ-414: project came from the request body (server-side, no filesystem path)
-	SourceConfig                            = "config"       // derived from .engram/config.json project_name
+	SourceConfig                            = "config"       // derived from project memory config project_name
 )
 
 // noiseSet lists directory names that are skipped during child-repo scanning.
@@ -193,13 +195,23 @@ func detectFromConfig(dir string) (DetectionResult, bool) {
 }
 
 func readConfigAt(projectDir string) (DetectionResult, bool) {
-	configPath := filepath.Join(projectDir, ".engram", "config.json")
+	configPath := filepath.Join(projectDir, product.RepoConfigDirName, "config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return DetectionResult{}, false
+			legacyPath := filepath.Join(projectDir, product.LegacyRepoConfigDirName, "config.json")
+			legacyData, legacyErr := os.ReadFile(legacyPath)
+			if legacyErr != nil {
+				if errors.Is(legacyErr, os.ErrNotExist) {
+					return DetectionResult{}, false
+				}
+				return invalidConfigResult(projectDir, fmt.Errorf("read %s: %w", legacyPath, legacyErr)), true
+			}
+			data = legacyData
+			configPath = legacyPath
+		} else {
+			return invalidConfigResult(projectDir, fmt.Errorf("read %s: %w", configPath, err)), true
 		}
-		return invalidConfigResult(projectDir, fmt.Errorf("read %s: %w", configPath, err)), true
 	}
 
 	var cfg configFile
