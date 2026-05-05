@@ -701,9 +701,9 @@ func TestMainExitPaths(t *testing.T) {
 	}{
 		{name: "no args", helperCase: "no-args", expectedOutput: "Usage:", expectedExitOne: true},
 		{name: "unknown command", helperCase: "unknown", expectedOutput: "Usage:", expectedStderr: "unknown command:", expectedExitOne: true},
-		{name: "cloud missing subcommand", helperCase: "cloud-missing", expectedOutput: "usage: engram cloud", expectedExitOne: true},
+		{name: "cloud missing subcommand", helperCase: "cloud-missing", expectedOutput: "usage: intuit-engram cloud", expectedExitOne: true},
 		{name: "cloud unknown subcommand", helperCase: "cloud-unknown", expectedOutput: "supported subcommands", expectedStderr: "unknown cloud command", expectedExitOne: true},
-		{name: "cloud enroll missing project", helperCase: "cloud-enroll-missing", expectedOutput: "usage: engram cloud enroll <project>", expectedExitOne: true},
+		{name: "cloud enroll missing project", helperCase: "cloud-enroll-missing", expectedOutput: "usage: intuit-engram cloud enroll <project>", expectedExitOne: true},
 	}
 
 	for _, tc := range tests {

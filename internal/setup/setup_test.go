@@ -131,9 +131,9 @@ func TestInstallGeminiCLIInjectsMCPConfig(t *testing.T) {
 		t.Fatalf("expected mcpServers object")
 	}
 
-	engram, ok := mcpServers["engram"].(map[string]any)
+	engram, ok := mcpServers["intuit-engram"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected mcpServers.engram object")
+		t.Fatalf("expected mcpServers.intuit-engram object")
 	}
 
 	// Since resolveEngramCommand() uses os.Executable() on all platforms, the
@@ -143,8 +143,8 @@ func TestInstallGeminiCLIInjectsMCPConfig(t *testing.T) {
 	if !ok || cmd == "" {
 		t.Fatalf("expected non-empty command string, got %#v", engram["command"])
 	}
-	if cmd == "engram" {
-		t.Fatalf("expected absolute path from os.Executable(), got bare 'engram'")
+	if cmd == "intuit-engram" {
+		t.Fatalf("expected absolute path from os.Executable(), got bare 'intuit-engram'")
 	}
 
 	args, ok := engram["args"].([]any)
@@ -709,38 +709,26 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		}
 	})
 
-	t.Run("marketplace add hard failure", func(t *testing.T) {
+	t.Run("local mcp write failure is non-fatal", func(t *testing.T) {
 		resetSetupSeams(t)
+		useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
-		runCommand = func(string, ...string) ([]byte, error) {
-			return []byte("permission denied"), errors.New("exit 1")
-		}
+		writeClaudeCodeUserMCPFn = func() error { return errors.New("permission denied") }
 
-		_, err := installClaudeCode()
-		if err == nil || !strings.Contains(err.Error(), "marketplace add failed") {
-			t.Fatalf("expected marketplace add failure, got %v", err)
+		result, err := installClaudeCode()
+		if err != nil {
+			t.Fatalf("expected success despite local MCP write failure, got %v", err)
+		}
+		if result.Files != 0 {
+			t.Fatalf("expected 0 files when local MCP write fails, got %d", result.Files)
 		}
 	})
 
-	t.Run("marketplace already then install success", func(t *testing.T) {
+	t.Run("claude setup writes local mcp config", func(t *testing.T) {
 		resetSetupSeams(t)
 		home := useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
-		calls := 0
-		runCommand = func(_ string, args ...string) ([]byte, error) {
-			calls++
-			if calls == 1 {
-				if strings.Join(args, " ") != "plugin marketplace add "+claudeCodeMarketplace {
-					t.Fatalf("unexpected first command args: %q", strings.Join(args, " "))
-				}
-				return []byte("already added"), errors.New("exit 1")
-			}
-			if strings.Join(args, " ") != "plugin install engram" {
-				t.Fatalf("unexpected second command args: %q", strings.Join(args, " "))
-			}
-			return []byte("installed"), nil
-		}
 
 		result, err := installClaudeCode()
 		if err != nil {
@@ -760,41 +748,33 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		}
 	})
 
-	t.Run("install hard failure", func(t *testing.T) {
+	t.Run("local mcp write success path", func(t *testing.T) {
 		resetSetupSeams(t)
+		home := useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
-		calls := 0
-		runCommand = func(string, ...string) ([]byte, error) {
-			calls++
-			if calls == 1 {
-				return []byte("ok"), nil
-			}
-			return []byte("network failure"), errors.New("exit 1")
-		}
 
-		_, err := installClaudeCode()
-		if err == nil || !strings.Contains(err.Error(), "plugin install failed") {
-			t.Fatalf("expected plugin install failure, got %v", err)
+		result, err := installClaudeCode()
+		if err != nil {
+			t.Fatalf("expected success, got %v", err)
+		}
+		if result.Files != 1 {
+			t.Fatalf("expected 1 file when local MCP write succeeds, got %d", result.Files)
+		}
+		expectedDir := filepath.Join(home, ".claude", "mcp")
+		if result.Destination != expectedDir {
+			t.Fatalf("expected destination %q, got %q", expectedDir, result.Destination)
 		}
 	})
 
-	t.Run("install already is success", func(t *testing.T) {
+	t.Run("local mcp write success is repeatable", func(t *testing.T) {
 		resetSetupSeams(t)
 		useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
-		calls := 0
-		runCommand = func(string, ...string) ([]byte, error) {
-			calls++
-			if calls == 1 {
-				return []byte("ok"), nil
-			}
-			return []byte("already installed"), errors.New("exit 1")
-		}
 
 		if _, err := installClaudeCode(); err != nil {
-			t.Fatalf("expected already-installed branch to succeed, got %v", err)
+			t.Fatalf("expected repeated local setup to succeed, got %v", err)
 		}
 	})
 

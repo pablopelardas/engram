@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Gentleman-Programming/engram/internal/diagnostic"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 )
 
@@ -80,8 +81,8 @@ func cmdDoctor(cfg store.Config) {
 }
 
 func printDoctorUsage() {
-	fmt.Fprintln(os.Stdout, "usage: engram doctor [--json] [--project PROJECT] [--check CODE]")
-	fmt.Fprintln(os.Stdout, "       engram doctor repair --project PROJECT --check CODE (--plan|--dry-run|--apply)")
+	fmt.Fprintf(os.Stdout, "usage: %s doctor [--json] [--project PROJECT] [--check CODE]\n", product.Name)
+	fmt.Fprintf(os.Stdout, "       %s doctor repair --project PROJECT --check CODE (--plan|--dry-run|--apply)\n", product.Name)
 	fmt.Fprintln(os.Stdout, "checks: "+strings.Join(diagnostic.RegisteredCodes(), ", "))
 }
 

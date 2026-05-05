@@ -127,8 +127,8 @@ func backfillAllowedProjectMutationChunks(ctx context.Context, cs *cloudstore.Cl
 		}
 		if report.CandidateMutations > 0 || report.ChunksInserted > 0 {
 			fmt.Fprintf(os.Stderr,
-				"engram cloud repair materialize-mutations: project=%s candidates=%d already_materialized=%d chunks_planned=%d chunks_inserted=%d\n",
-				report.Project, report.CandidateMutations, report.AlreadyMaterialized, report.ChunksPlanned, report.ChunksInserted,
+				"%s cloud repair materialize-mutations: project=%s candidates=%d already_materialized=%d chunks_planned=%d chunks_inserted=%d\n",
+				product.Name, report.Project, report.CandidateMutations, report.AlreadyMaterialized, report.ChunksPlanned, report.ChunksInserted,
 			)
 		}
 	}
@@ -411,7 +411,7 @@ func cmdCloudUpgradeRepair(cfg store.Config) {
 func cmdCloudUpgradeBootstrap(cfg store.Config) {
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade bootstrap --project <name> [--resume]")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade bootstrap --project <name> [--resume]\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -509,7 +509,7 @@ func captureUpgradeSnapshotBeforeBootstrap(s *store.Store, cfg store.Config, pro
 func cmdCloudUpgradeStatus(cfg store.Config) {
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade status --project <name>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade status --project <name>\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -540,7 +540,7 @@ func cmdCloudUpgradeStatus(cfg store.Config) {
 func cmdCloudUpgradeRollback(cfg store.Config) {
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade rollback --project <name>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade rollback --project <name>\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -628,7 +628,7 @@ func cmdCloudStatus(cfg store.Config) {
 		}
 		fmt.Println("Auth status: token not configured (client token is optional at preflight)")
 		fmt.Println("Sync readiness: ready to attempt explicit --project sync (project must be enrolled)")
-		fmt.Println("Hint: if the remote server enforces bearer auth, set ENGRAM_CLOUD_TOKEN")
+		fmt.Printf("Hint: if the remote server enforces bearer auth, set %s\n", product.EnvCloudToken)
 		printCloudStatusSyncDiagnostic(cfg)
 		return
 	}
@@ -669,13 +669,13 @@ func cmdCloudEnroll(cfg store.Config) {
 	if len(os.Args) >= 4 {
 		arg := strings.TrimSpace(os.Args[3])
 		if arg == "--help" || arg == "-h" || arg == "help" {
-			fmt.Println("usage: engram cloud enroll <project>")
+			fmt.Printf("usage: %s cloud enroll <project>\n", product.Name)
 			fmt.Println("Enroll a local-first project for explicit cloud replication.")
 			return
 		}
 	}
 	if len(os.Args) < 4 || strings.TrimSpace(os.Args[3]) == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud enroll <project>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud enroll <project>\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -697,7 +697,7 @@ func cmdCloudEnroll(cfg store.Config) {
 
 func cmdCloudConfig(cfg store.Config) {
 	if len(os.Args) < 5 || os.Args[3] != "--server" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud config --server <url>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud config --server <url>\n", product.Name)
 		exitFunc(1)
 	}
 	cc := &cloudConfig{ServerURL: strings.TrimSpace(os.Args[4])}

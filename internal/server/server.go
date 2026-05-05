@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 )
 
@@ -126,7 +127,7 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("engram server: listen %s: %w", addr, err)
 	}
-	log.Printf("[engram] HTTP server listening on %s", addr)
+	log.Printf("[%s] HTTP server listening on %s", product.Name, addr)
 	return serveFn(ln, s.mux)
 }
 
@@ -663,7 +664,7 @@ func (s *Server) handleMigrateProject(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.store.MigrateProject(body.OldProject, body.NewProject)
 	if err != nil {
-		log.Printf("[engram] project migration failed: %v", err)
+		log.Printf("[%s] project migration failed: %v", product.Name, err)
 		jsonError(w, http.StatusInternalServerError, "migration failed")
 		return
 	}
@@ -673,7 +674,7 @@ func (s *Server) handleMigrateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[engram] migrated project %q → %q (obs: %d, sessions: %d, prompts: %d)",
+	log.Printf("[%s] migrated project %q → %q (obs: %d, sessions: %d, prompts: %d)", product.Name,
 		body.OldProject, body.NewProject,
 		result.ObservationsUpdated, result.SessionsUpdated, result.PromptsUpdated)
 

@@ -181,7 +181,7 @@ func detectFromConfig(dir string) (DetectionResult, bool) {
 
 	// Project config is a project/repo lock, not a global ancestor setting. When
 	// cwd is inside git, only the repository root may define the lock. This keeps
-	// ~/.engram/config.json (the global data directory) from being inherited by
+	// the global data directory config from being inherited by
 	// every directory under $HOME.
 	if gitRoot := detectGitRootDir(absDir); gitRoot != "" {
 		return readConfigAt(gitRoot)

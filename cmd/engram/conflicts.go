@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Gentleman-Programming/engram/internal/llm"
+	"github.com/Gentleman-Programming/engram/internal/product"
 	"github.com/Gentleman-Programming/engram/internal/store"
 )
 
@@ -38,7 +39,7 @@ func cmdConflicts(cfg store.Config) {
 }
 
 func printConflictsUsage() {
-	fmt.Fprintln(os.Stderr, "usage: engram conflicts <subcommand> [options]")
+	fmt.Fprintf(os.Stderr, "usage: %s conflicts <subcommand> [options]\n", product.Name)
 	fmt.Fprintln(os.Stderr, "subcommands: list, show, stats, scan, deferred")
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "  list       [--project P]  [--status S]  [--since RFC3339]  [--limit N]")
@@ -176,7 +177,7 @@ func cmdConflictsList(cfg store.Config) {
 
 func cmdConflictsShow(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram conflicts show <relation_id>")
+		fmt.Fprintf(os.Stderr, "usage: %s conflicts show <relation_id>\n", product.Name)
 		exitFunc(1)
 		return
 	}
