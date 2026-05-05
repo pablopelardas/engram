@@ -753,7 +753,7 @@ func cmdCloudServe() {
 		fatal(err)
 		return
 	}
-	fmt.Printf("Starting Engram cloud server on port %d\n", runtimeCfg.Port)
+	fmt.Printf("Starting Intuit Engram cloud server on port %d\n", runtimeCfg.Port)
 	if err := runtime.Start(); err != nil {
 		fatal(err)
 	}
