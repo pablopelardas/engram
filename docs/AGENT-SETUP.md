@@ -15,7 +15,7 @@ Intuit Engram works with **any MCP-compatible agent**. Pick your agent below.
 
 | Agent | One-liner | Manual Config |
 |-------|-----------|---------------|
-| Claude Code | `claude plugin marketplace add Gentleman-Programming/engram && claude plugin install engram` | [Details](#claude-code) |
+| Claude Code | `claude plugin marketplace add Gentleman-Programming/engram && claude plugin install intuit-engram` | [Details](#claude-code) |
 | OpenCode | `intuit-engram setup opencode` | [Details](#opencode) |
 | Gemini CLI | `intuit-engram setup gemini-cli` | [Details](#gemini-cli) |
 | Codex | `intuit-engram setup codex` | [Details](#codex) |
@@ -136,7 +136,7 @@ The plugin auto-starts the HTTP server if needed for session tracking. If your e
 intuit-engram serve &
 ```
 
-> **Windows**: OpenCode uses `~/.config/opencode/` on Windows too (it does not read `%APPDATA%\opencode\`). `intuit-engram setup opencode` writes to `~/.config/opencode/plugins/` and `~/.config/opencode/opencode.json`. To run the server in the background: `Start-Process engram -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `intuit-engram serve` in a separate terminal.
+> **Windows**: OpenCode uses `~/.config/opencode/` on Windows too (it does not read `%APPDATA%\opencode\`). `intuit-engram setup opencode` writes to `~/.config/opencode/plugins/` and `~/.config/opencode/opencode.json`. To run the server in the background: `Start-Process intuit-engram -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `intuit-engram serve` in a separate terminal.
 
 **Alternative: Manual MCP-only setup** (no plugin, all 18 tools by default):
 
@@ -154,7 +154,7 @@ Add to your `opencode.json` (global: `~/.config/opencode/opencode.json` on all p
 }
 ```
 
-See [Plugins → OpenCode Plugin](PLUGINS.md#opencode-plugin) for details on what the plugin provides beyond bare MCP.
+The plugin provides session tracking, compaction recovery, and Memory Protocol beyond bare MCP.
 
 ---
 
@@ -224,7 +224,7 @@ PowerShell fallback test and local override example:
 }
 ```
 
-See [Plugins → Claude Code Plugin](PLUGINS.md#claude-code-plugin) for details on what the plugin provides.
+The plugin provides session tracking, compaction recovery, and Memory Protocol beyond bare MCP.
 
 ---
 
@@ -259,7 +259,7 @@ Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/s
 Or via the CLI:
 
 ```bash
-gemini mcp add engram intuit-engram mcp
+gemini mcp add intuit-engram intuit-engram mcp
 ```
 
 ---
@@ -334,7 +334,7 @@ code --add-mcp "{\"name\":\"intuit-engram\",\"command\":\"intuit-engram\",\"args
 
 Without the Memory Protocol, the agent has the tools but doesn't know WHEN to use them. Add these instructions to your agent's prompt:
 
-**For Copilot:** Create a `.instructions.md` file in the VS Code User `prompts/` folder and paste the Memory Protocol from [DOCS.md](../DOCS.md#memory-protocol-full-text).
+**For Copilot:** Create a `.instructions.md` file in the VS Code User `prompts/` folder and paste the Memory Protocol from the [Surviving Compaction](#surviving-compaction-recommended) section below.
 
 Recommended file path:
 - macOS: `~/Library/Application Support/Code/User/prompts/engram-memory.instructions.md`
@@ -349,7 +349,7 @@ The Memory Protocol tells the agent:
 - **Session close** — mandatory `mem_session_summary` before ending
 - **After compaction** — recover state with `mem_context`
 
-See [Surviving Compaction](#surviving-compaction-recommended) for the minimal version, or [DOCS.md](../DOCS.md#memory-protocol-full-text) for the full Memory Protocol text you can copy-paste.
+See [Surviving Compaction](#surviving-compaction-recommended) for the Memory Protocol text you can copy-paste.
 
 ---
 
@@ -372,7 +372,7 @@ See [Surviving Compaction](#surviving-compaction-recommended) for the minimal ve
 
 **Adding the Memory Protocol** (recommended):
 
-Add the Memory Protocol as a global rule in `~/.gemini/GEMINI.md`, or as a workspace rule in `.agent/rules/`. See [DOCS.md](../DOCS.md#memory-protocol-full-text) for the full text, or use the minimal version from [Surviving Compaction](#surviving-compaction-recommended).
+Add the Memory Protocol as a global rule in `~/.gemini/GEMINI.md`, or as a workspace rule in `.agent/rules/`. See [Surviving Compaction](#surviving-compaction-recommended) for the Memory Protocol text.
 
 > **Note:** Antigravity has its own skill, rule, and MCP systems separate from VS Code. Do not use `.vscode/mcp.json`.
 
@@ -399,7 +399,7 @@ Add to your `.cursor/mcp.json` (same path on all platforms — it's project-rela
 > - **Project-specific:** `.cursor/rules/engram.mdc` — commit to git so your whole team gets it
 > - **Global (all projects):** `~/.cursor/rules/engram.mdc` (Windows: `%USERPROFILE%\.cursor\rules\engram.mdc`) — create the directory if it doesn't exist
 >
-> See [DOCS.md](../DOCS.md#memory-protocol-full-text) for the full text, or use the minimal version from [Surviving Compaction](#surviving-compaction-recommended).
+> See [Surviving Compaction](#surviving-compaction-recommended) for the Memory Protocol text.
 >
 > **Note:** The legacy `.cursorrules` file at the project root is still recognized by Cursor but is deprecated. Prefer `.cursor/rules/` for all new setups.
 
@@ -420,7 +420,7 @@ Add to your `~/.windsurf/mcp.json` (Windows: `%USERPROFILE%\.windsurf\mcp.json`)
 }
 ```
 
-> **Memory Protocol:** Add the Memory Protocol instructions to your `.windsurfrules` file. See [DOCS.md](../DOCS.md#memory-protocol-full-text) for the full text.
+> **Memory Protocol:** Add the Memory Protocol instructions to your `.windsurfrules` file. See [Surviving Compaction](#surviving-compaction-recommended) for the text.
 
 ---
 
@@ -497,7 +497,7 @@ This is the **nuclear option** — system prompts survive everything, including 
 
 ## Conflict Surfacing (automatic)
 
-When you save a memory with `mem_save`, Engram automatically scans for similar existing observations using FTS5 full-text search. If any candidates are found above a relevance threshold, the response includes a `candidates[]` array and `judgment_required: true`. Nothing to configure — this runs on every save.
+When you save a memory with `mem_save`, Intuit Engram automatically scans for similar existing observations using FTS5 full-text search. If any candidates are found above a relevance threshold, the response includes a `candidates[]` array and `judgment_required: true`. Nothing to configure — this runs on every save.
 
 ### What the agent sees
 
@@ -561,7 +561,7 @@ Nothing breaks if `mem_judge` is never called — pending relations accumulate u
 
 Agents can also proactively judge the relationship between any two memories using `mem_compare` (also available in the agent profile). Unlike `mem_judge`, which resolves a candidate surfaced by `mem_save`, `mem_compare` lets the agent compare any two observation IDs it has already read, and persist a verdict directly. This is useful for agent-initiated semantic audit workflows.
 
-See [Plugins → mem_compare reference](PLUGINS.md#mcp-tool-reference--mem_compare) for parameters and behavior.
+See the MCP tool reference for `mem_compare` parameters and behavior.
 
 ---
 
