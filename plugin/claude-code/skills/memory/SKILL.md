@@ -123,7 +123,11 @@ Format for `mem_save`:
 - If unsure about the key, call `mem_suggest_topic_key` first, then reuse that key consistently
 - If you already know the exact ID to fix, use `mem_update`
 
-## WHEN TO SEARCH MEMORY
+## WHEN TO SEARCH MEMORY (MANDATORY — NEVER SKIP)
+
+**YOU MUST call `mem_context` on EVERY session start and BEFORE responding to the user's FIRST message.**
+
+This is NOT optional. If you skip this, you will respond without important context from previous sessions.
 
 When the user asks to recall something — any variation of "remember", "recall", "what did we do",
 "how did we solve", "recordar", "acordate", "qué hicimos", or references to past work:
@@ -132,9 +136,12 @@ When the user asks to recall something — any variation of "remember", "recall"
 3. If you find a match, use `mem_get_observation` for full untruncated content
 
 Also search memory PROACTIVELY when:
-- Starting work on something that might have been done before
-- The user mentions a topic you have no context on — check if past sessions covered it
-- The user's FIRST message references the project, a feature, or a problem — call `mem_search` with keywords from their message to check for prior work before responding
+- **Starting work on something that might have been done before**
+- **The user mentions a topic you have no context on** — check if past sessions covered it
+- **The user's FIRST message references the project, a feature, or a problem** — call `mem_search` with keywords from their message to check for prior work BEFORE responding
+- **You detect a project with `.intuit-engram/config.json`** — immediately call `mem_context` to load corporate context
+
+**CRITICAL: If mem_context returns memories, acknowledge them in your response. Do NOT ignore them.**
 
 ## SESSION CLOSE PROTOCOL (mandatory)
 
