@@ -1,11 +1,11 @@
 /**
- * Engram — OpenCode plugin adapter
+ * Intuit Engram — OpenCode plugin adapter
  *
  * Thin layer that connects OpenCode's event system to the Engram Go binary.
  * The Go binary runs as a local HTTP server and handles all persistence.
  *
  * Flow:
- *   OpenCode events → this plugin → HTTP calls → engram serve → SQLite
+ *   OpenCode events → this plugin → HTTP calls → intuit-engram serve → SQLite
  *
  * Session resilience:
  *   Uses `ensureSession()` before any DB write. This means sessions are
@@ -20,7 +20,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 const ENGRAM_PORT = parseInt(process.env.ENGRAM_PORT ?? "7437")
 const ENGRAM_URL = `http://127.0.0.1:${ENGRAM_PORT}`
-const ENGRAM_BIN = process.env.ENGRAM_BIN ?? "engram"
+const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? "intuit-engram"
 
 // Engram's own MCP tools — don't count these as "tool calls" for session stats
 const ENGRAM_TOOLS = new Set([
@@ -185,7 +185,7 @@ function truncate(str: string, max: number): string {
 }
 
 /**
- * Strip <private>...</private> tags before sending to engram.
+ * Strip <private>...</private> tags before sending to Intuit Engram.
  * Double safety: the Go binary also strips, but we strip here too
  * so sensitive data never even hits the wire.
  */
@@ -203,7 +203,7 @@ export const Engram: Plugin = async (ctx) => {
   // Track tool counts per session (in-memory only, not critical)
   const toolCounts = new Map<string, number>()
 
-  // Track which sessions we've already ensured exist in engram
+  // Track which sessions we've already ensured exist in Intuit Engram
   const knownSessions = new Set<string>()
 
   // Track sub-agent session IDs so we can suppress their tool-hook registrations.
@@ -213,7 +213,7 @@ export const Engram: Plugin = async (ctx) => {
   const subAgentSessions = new Set<string>()
 
   /**
-   * Ensure a session exists in engram. Idempotent — calls POST /sessions
+   * Ensure a session exists in Intuit Engram. Idempotent — calls POST /sessions
    * which uses INSERT OR IGNORE. Safe to call multiple times.
    *
    * Silently skips sub-agent sessions (tracked in `subAgentSessions`).
@@ -233,7 +233,7 @@ export const Engram: Plugin = async (ctx) => {
     })
   }
 
-  // Try to start engram server if not running
+  // Try to start Intuit Engram server if not running
   const running = await isEngramRunning()
   if (!running) {
     try {
@@ -257,12 +257,12 @@ export const Engram: Plugin = async (ctx) => {
     })
   }
 
-  // Auto-import: if .engram/manifest.json exists in the project repo,
-  // run `engram sync --import` to load any new chunks into the local DB.
+  // Auto-import: if .intuit-engram/manifest.json exists in the project repo,
+  // run `intuit-engram sync --import` to load any new chunks into the local DB.
   // This is how git-synced memories get loaded when cloning a repo or
   // pulling changes. Each chunk is imported only once (tracked by ID).
   try {
-    const manifestFile = `${ctx.directory}/.engram/manifest.json`
+    const manifestFile = `${ctx.directory}/.intuit-engram/manifest.json`
     const file = Bun.file(manifestFile)
     if (await file.exists()) {
       Bun.spawn([ENGRAM_BIN, "sync", "--import"], {

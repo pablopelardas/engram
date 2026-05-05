@@ -73,8 +73,6 @@ type Result struct {
 	TUIPluginEnabled bool
 }
 
-const claudeCodeMarketplace = "Gentleman-Programming/engram"
-
 const openCodeSubagentStatuslinePlugin = "opencode-subagent-statusline"
 
 // claudeCodeMCPTools are the MCP tool permission names for the agent profile
@@ -92,10 +90,10 @@ func claudeCodePermissionTools(agentTools map[string]bool) []string {
 	}
 	sort.Strings(toolNames)
 
-	// Claude Code's bare/user-level MCP config uses the server id "engram".
+	// Claude Code's bare/user-level MCP config uses the product server id.
 	// Older plugin installs have been observed with a plugin-scoped server id;
 	// allowlisting both forms is harmless and keeps re-running setup idempotent.
-	prefixes := []string{"mcp__engram__", "mcp__plugin_engram_engram__"}
+	prefixes := []string{"mcp__" + product.Name + "__", "mcp__plugin_" + product.Name + "_" + product.Name + "__"}
 	permissions := make([]string, 0, len(toolNames)*len(prefixes))
 	for _, prefix := range prefixes {
 		for _, toolName := range toolNames {
@@ -106,18 +104,18 @@ func claudeCodePermissionTools(agentTools map[string]bool) []string {
 }
 
 // codexEngramBlock is the canonical Codex TOML MCP block.
-// Command is always the bare "engram" name in this constant because
+// Command is always the bare product name in this constant because
 // upsertCodexEngramBlock generates the actual content via codexEngramBlockStr()
 // which uses resolveEngramCommand() at runtime. This constant is kept for tests
 // that verify idempotency against the already-written string when os.Executable
-// returns "engram" (fallback path).
-const codexEngramBlock = "[mcp_servers.engram]\ncommand = \"engram\"\nargs = [\"mcp\", \"--tools=agent\"]"
+// returns the product name (fallback path).
+const codexEngramBlock = "[mcp_servers.intuit-engram]\ncommand = \"intuit-engram\"\nargs = [\"mcp\", \"--tools=agent\"]"
 
-// codexEngramBlockStr returns the Codex TOML block for the engram MCP server,
+// codexEngramBlockStr returns the Codex TOML block for the product MCP server,
 // using the resolved absolute binary path from os.Executable().
 func codexEngramBlockStr() string {
 	cmd := resolveEngramCommand()
-	return "[mcp_servers.engram]\ncommand = " + fmt.Sprintf("%q", cmd) + "\nargs = [\"mcp\", \"--tools=agent\"]"
+	return "[mcp_servers." + product.Name + "]\ncommand = " + fmt.Sprintf("%q", cmd) + "\nargs = [\"mcp\", \"--tools=agent\"]"
 }
 
 const memoryProtocolMarkdown = `## Engram Persistent Memory — Protocol
@@ -316,7 +314,7 @@ func installOpenCode() (*Result, error) {
 
 	data, err := openCodeReadFile("plugins/opencode/engram.ts")
 	if err != nil {
-		return nil, fmt.Errorf("read embedded engram.ts: %w", err)
+		return nil, fmt.Errorf("read embedded opencode plugin: %w", err)
 	}
 
 	// Patch ENGRAM_BIN in the installed copy so the plugin can find the binary
@@ -327,7 +325,7 @@ func installOpenCode() (*Result, error) {
 	// not modified — it keeps the simple env-var form for development flexibility.
 	data = patchEngramBINLine(data, resolveEngramCommand())
 
-	dest := filepath.Join(dir, "engram.ts")
+	dest := filepath.Join(dir, product.Name+".ts")
 	if err := openCodeWriteFileFn(dest, data, 0644); err != nil {
 		return nil, fmt.Errorf("write %s: %w", dest, err)
 	}
@@ -460,7 +458,7 @@ func injectOpenCodeMCP() error {
 	}
 	entryJSON, err := jsonMarshalFn(engramEntry)
 	if err != nil {
-		return fmt.Errorf("marshal engram entry: %w", err)
+		return fmt.Errorf("marshal %s entry: %w", product.Name, err)
 	}
 	mcpBlock[product.Name] = json.RawMessage(entryJSON)
 
@@ -574,29 +572,9 @@ func stripJSONC(data []byte) []byte {
 
 func installClaudeCode() (*Result, error) {
 	// Check that claude CLI is available
-	claudeBin, err := lookPathFn("claude")
+	_, err := lookPathFn("claude")
 	if err != nil {
 		return nil, fmt.Errorf("claude CLI not found in PATH — install Claude Code first: https://docs.anthropic.com/en/docs/claude-code")
-	}
-
-	// Step 1: Add marketplace (idempotent — if already added, claude will say so)
-	addOut, err := runCommand(claudeBin, "plugin", "marketplace", "add", claudeCodeMarketplace)
-	addOutputStr := strings.TrimSpace(string(addOut))
-	if err != nil {
-		// If marketplace is already added, that's fine
-		if !strings.Contains(addOutputStr, "already") {
-			return nil, fmt.Errorf("marketplace add failed: %s", addOutputStr)
-		}
-	}
-
-	// Step 2: Install the plugin
-	installOut, err := runCommand(claudeBin, "plugin", "install", product.LegacyName)
-	installOutputStr := strings.TrimSpace(string(installOut))
-	if err != nil {
-		// If plugin is already installed, that's fine
-		if !strings.Contains(installOutputStr, "already") {
-			return nil, fmt.Errorf("plugin install failed: %s", installOutputStr)
-		}
 	}
 
 	// Step 3: Write a durable user-level MCP config at ~/.claude/mcp/intuit-engram.json
@@ -820,7 +798,7 @@ func injectGeminiMCP(configPath string) error {
 	}
 	entryJSON, err := jsonMarshalFn(engramEntry)
 	if err != nil {
-		return fmt.Errorf("marshal engram entry: %w", err)
+		return fmt.Errorf("marshal %s entry: %w", product.Name, err)
 	}
 	mcpServers[product.Name] = json.RawMessage(entryJSON)
 
@@ -992,7 +970,7 @@ func upsertCodexEngramBlock(content string) string {
 	var kept []string
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == "[mcp_servers.engram]" {
+		if trimmed == "[mcp_servers.engram]" || trimmed == "[mcp_servers."+product.Name+"]" {
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
@@ -1091,9 +1069,9 @@ func codexConfigPath() string {
 }
 
 func codexInstructionsPath() string {
-	return filepath.Join(filepath.Dir(codexConfigPath()), "engram-instructions.md")
+	return filepath.Join(filepath.Dir(codexConfigPath()), product.Name+"-instructions.md")
 }
 
 func codexCompactPromptPath() string {
-	return filepath.Join(filepath.Dir(codexConfigPath()), "engram-compact-prompt.md")
+	return filepath.Join(filepath.Dir(codexConfigPath()), product.Name+"-compact-prompt.md")
 }

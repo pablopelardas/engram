@@ -484,7 +484,7 @@ func preflightCloudSync(s *store.Store, cfg store.Config, project string, mutate
 	}
 	hasServer := strings.TrimSpace(cc.ServerURL) != ""
 	if !hasServer {
-		message := "cloud server is missing: configure server URL with `engram cloud config --server <url>`"
+		message := fmt.Sprintf("cloud server is missing: configure server URL with `%s cloud config --server <url>`", product.Name)
 		if mutateState {
 			_ = s.MarkSyncBlocked(targetKey, constants.ReasonCloudConfigError, message)
 		}
@@ -527,15 +527,15 @@ func preflightCloudSyncLegacyMutations(s *store.Store, project, targetKey string
 
 	reasonCode := store.UpgradeReasonRepairableLegacyMutationPayload
 	message := fmt.Sprintf(
-		"legacy mutation payloads require repair before cloud sync for project %q: run `engram cloud upgrade doctor --project %s` then `engram cloud upgrade repair --project %s --apply`",
-		project, project, project,
+		"legacy mutation payloads require repair before cloud sync for project %q: run `%s cloud upgrade doctor --project %s` then `%s cloud upgrade repair --project %s --apply`",
+		project, product.Name, project, product.Name, project,
 	)
 	if report.BlockedCount > 0 {
 		reasonCode = store.UpgradeReasonBlockedLegacyMutationManual
 		first := firstBlockedLegacyMutationFinding(report)
 		message = fmt.Sprintf(
-			"legacy mutation payloads require manual action before cloud sync for project %q (seq=%d entity=%s op=%s): %s; inspect with `engram cloud upgrade doctor --project %s` and run `engram cloud upgrade repair --project %s --apply` for deterministic repairs",
-			project, first.Seq, first.Entity, first.Op, first.Message, project, project,
+			"legacy mutation payloads require manual action before cloud sync for project %q (seq=%d entity=%s op=%s): %s; inspect with `%s cloud upgrade doctor --project %s` and run `%s cloud upgrade repair --project %s --apply` for deterministic repairs",
+			project, first.Seq, first.Entity, first.Op, first.Message, product.Name, project, product.Name, project,
 		)
 	}
 	if mutateState {
@@ -667,7 +667,7 @@ func main() {
 	case "setup":
 		cmdSetup()
 	case "version", "--version", "-v":
-		fmt.Printf("engram %s\n", version)
+		fmt.Printf("%s %s\n", product.Name, version)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -697,7 +697,7 @@ func handleConfigFreeCommand(args []string) bool {
 	}
 	switch strings.ToLower(strings.TrimSpace(args[0])) {
 	case "version", "--version", "-v":
-		fmt.Printf("engram %s\n", version)
+		fmt.Printf("%s %s\n", product.Name, version)
 		return true
 	case "help", "--help", "-h":
 		printUsage()
@@ -888,7 +888,7 @@ func cmdTUI(cfg store.Config) {
 
 func cmdSearch(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]")
+		fmt.Fprintf(os.Stderr, "usage: %s search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -964,7 +964,7 @@ func cmdSearch(cfg store.Config) {
 
 func cmdSave(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY]")
+		fmt.Fprintf(os.Stderr, "usage: %s save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY]\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -1035,7 +1035,7 @@ func cmdSave(cfg store.Config) {
 
 func cmdTimeline(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram timeline <observation_id> [--before N] [--after N]")
+		fmt.Fprintf(os.Stderr, "usage: %s timeline <observation_id> [--before N] [--after N]\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -1172,7 +1172,7 @@ func cmdStats(cfg store.Config) {
 }
 
 func cmdExport(cfg store.Config) {
-	outFile := "engram-export.json"
+	outFile := product.ExportFilename
 	if len(os.Args) > 2 {
 		outFile = os.Args[2]
 	}
@@ -1205,7 +1205,7 @@ func cmdExport(cfg store.Config) {
 
 func cmdImport(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram import <file.json>")
+		fmt.Fprintf(os.Stderr, "usage: %s import <file.json>\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -1283,7 +1283,7 @@ func cmdSync(cfg store.Config) {
 		}
 	}
 
-	syncDir := ".engram"
+	syncDir := product.SyncDirName
 
 	s, err := storeNew(cfg)
 	if err != nil {
@@ -1291,7 +1291,7 @@ func cmdSync(cfg store.Config) {
 	}
 	defer s.Close()
 
-	cloudEnabled := doCloud || envBool("ENGRAM_CLOUD_SYNC")
+	cloudEnabled := doCloud || envBool(product.EnvCloudSync) || envBool(product.LegacyEnvCloudSync)
 	if cloudEnabled {
 		if doAll {
 			fatal(fmt.Errorf("cloud sync requires a single explicit --project scope; --all is not supported"))
@@ -1397,7 +1397,7 @@ func cmdSync(cfg store.Config) {
 		if cloudEnabled {
 			fmt.Printf("Imported %d new remote chunk(s) for project %q\n", result.ChunksImported, project)
 		} else {
-			fmt.Printf("Imported %d new chunk(s) from .engram/\n", result.ChunksImported)
+			fmt.Printf("Imported %d new chunk(s) from %s/\n", result.ChunksImported, product.SyncDirName)
 		}
 		fmt.Printf("  Sessions:     %d\n", result.SessionsImported)
 		fmt.Printf("  Observations: %d\n", result.ObservationsImported)
@@ -1451,12 +1451,12 @@ func cmdSync(cfg store.Config) {
 	}
 	fmt.Println()
 	fmt.Println("Add to git:")
-	fmt.Printf("  git add .engram/ && git commit -m \"sync engram memories\"\n")
+	fmt.Printf("  git add %s/ && git commit -m \"sync intuit-engram memories\"\n", product.SyncDirName)
 }
 
 func printSyncUsage() {
-	fmt.Println("usage: engram sync [--import | --status] [--all] [--cloud --project PROJECT]")
-	fmt.Println("Local sync exports project-scoped chunks to .engram/ by default.")
+	fmt.Printf("usage: %s sync [--import | --status] [--all] [--cloud --project PROJECT]\n", product.Name)
+	fmt.Printf("Local sync exports project-scoped chunks to %s/ by default.\n", product.SyncDirName)
 	fmt.Println("Cloud sync requires an explicit --project and never runs from --help.")
 }
 
@@ -1613,9 +1613,9 @@ func cmdObsidianExport(cfg store.Config) {
 
 		if w != nil {
 			if runErr := w.Run(ctx); runErr != nil {
-				log.Printf("[engram] shutting down watch mode: %v", runErr)
+				log.Printf("[%s] shutting down watch mode: %v", product.Name, runErr)
 			} else {
-				log.Printf("[engram] shutting down watch mode")
+				log.Printf("[%s] shutting down watch mode", product.Name)
 			}
 		}
 		exitFunc(0)
@@ -1642,7 +1642,7 @@ func cmdObsidianExport(cfg store.Config) {
 }
 
 func cmdProjects(cfg store.Config) {
-	// Route: engram projects list | engram projects consolidate [--all] [--dry-run]
+	// Route: intuit-engram projects list | intuit-engram projects consolidate [--all] [--dry-run]
 	subCmd := "list"
 	if len(os.Args) > 2 {
 		subCmd = os.Args[2]
@@ -1656,9 +1656,9 @@ func cmdProjects(cfg store.Config) {
 		cmdProjectsList(cfg)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown projects subcommand: %s\n", subCmd)
-		fmt.Fprintln(os.Stderr, "usage: engram projects list")
-		fmt.Fprintln(os.Stderr, "       engram projects consolidate [--all] [--dry-run]")
-		fmt.Fprintln(os.Stderr, "       engram projects prune [--dry-run]")
+		fmt.Fprintf(os.Stderr, "usage: %s projects list\n", product.Name)
+		fmt.Fprintf(os.Stderr, "       %s projects consolidate [--all] [--dry-run]\n", product.Name)
+		fmt.Fprintf(os.Stderr, "       %s projects prune [--dry-run]\n", product.Name)
 		exitFunc(1)
 	}
 }
@@ -2153,7 +2153,7 @@ func cmdProjectsPrune(cfg store.Config) {
 func cmdSetup() {
 	agents := setupSupportedAgents()
 
-	// If agent name given directly: engram setup opencode
+	// If agent name given directly: intuit-engram setup opencode
 	if len(os.Args) > 2 && !strings.HasPrefix(os.Args[2], "-") {
 		result, err := setupInstallAgent(os.Args[2])
 		if err != nil {
@@ -2166,7 +2166,7 @@ func cmdSetup() {
 	}
 
 	// Interactive selection
-	fmt.Println("engram setup — Install agent plugin")
+	fmt.Printf("%s setup — Install agent plugin\n", product.Name)
 	fmt.Println()
 	fmt.Println("Which agent do you want to set up?")
 	fmt.Println()
@@ -2204,13 +2204,13 @@ func printPostInstall(result *setup.Result) {
 	case "opencode":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart OpenCode — plugin + MCP server are ready")
-		fmt.Println("  2. Run 'engram serve &' for session tracking (HTTP API)")
+		fmt.Printf("  2. Run '%s serve &' for session tracking (HTTP API)\n", product.Name)
 		if result.TUIPluginEnabled {
 			fmt.Println("\nAlso enabled: opencode-subagent-statusline in tui.json — sub-agent activity in the sidebar/footer.")
 		}
 	case "claude-code":
-		// Offer to add engram tools to the permissions allowlist
-		fmt.Print("\nAdd engram tools to ~/.claude/settings.json allowlist?\n")
+		// Offer to add intuit-engram tools to the permissions allowlist
+		fmt.Printf("\nAdd %s tools to ~/.claude/settings.json allowlist?\n", product.Name)
 		fmt.Print("This prevents Claude Code from asking permission on every tool call.\n")
 		fmt.Print("Add to allowlist? (y/N): ")
 		var answer string
@@ -2221,26 +2221,26 @@ func printPostInstall(result *setup.Result) {
 				fmt.Fprintf(os.Stderr, "  warning: could not update allowlist: %v\n", err)
 				fmt.Fprintln(os.Stderr, "  You can add them manually to permissions.allow in ~/.claude/settings.json")
 			} else {
-				fmt.Println("  ✓ Engram tools added to allowlist")
+				fmt.Printf("  ✓ %s tools added to allowlist\n", product.Name)
 			}
 		} else {
 			fmt.Println("  Skipped. You can add them later to permissions.allow in ~/.claude/settings.json")
 		}
 
 		fmt.Println("\nNext steps:")
-		fmt.Println("  1. Restart Claude Code — the plugin is active immediately")
-		fmt.Println("  2. Verify with: claude plugin list")
-		fmt.Println("  3. MCP config written to ~/.claude/mcp/engram.json using absolute binary path")
-		fmt.Println("     (survives plugin auto-updates; re-run 'engram setup claude-code' if you move the binary)")
+		fmt.Println("  1. Restart Claude Code so the MCP config is reloaded")
+		fmt.Printf("  2. MCP config written to ~/.claude/mcp/%s.json using absolute binary path\n", product.Name)
+		fmt.Printf("     (re-run '%s setup claude-code' if you move the binary)\n", product.Name)
+		fmt.Println("  3. If you want hook-based session automation, load plugin/claude-code from this private repo explicitly")
 	case "gemini-cli":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart Gemini CLI so MCP config is reloaded")
-		fmt.Println("  2. Verify ~/.gemini/settings.json includes mcpServers.engram")
+		fmt.Printf("  2. Verify ~/.gemini/settings.json includes mcpServers.%s\n", product.Name)
 		fmt.Println("  3. Verify ~/.gemini/system.md + ~/.gemini/.env exist for compaction recovery")
 	case "codex":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart Codex so MCP config is reloaded")
-		fmt.Println("  2. Verify ~/.codex/config.toml has [mcp_servers.engram]")
+		fmt.Printf("  2. Verify ~/.codex/config.toml has [mcp_servers.%s]\n", product.Name)
 		fmt.Println("  3. Verify model_instructions_file + experimental_compact_prompt_file are set")
 	}
 }
@@ -2248,10 +2248,10 @@ func printPostInstall(result *setup.Result) {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func printUsage() {
-	fmt.Printf(`engram v%s — Persistent memory for AI coding agents
+	fmt.Printf(`%s v%s — Persistent memory for AI coding agents
 
 Usage:
-  engram <command> [arguments]
+  %s <command> [arguments]
 
 Commands:
   serve [port]       Start HTTP API server (default: 7437)
@@ -2259,7 +2259,7 @@ Commands:
                      Start MCP server (stdio transport, for any AI agent)
                        Profiles: agent (15 tools), admin (4 tools), all (default, 19)
                        Combine: --tools=agent,admin or pick individual tools
-                       Example: engram mcp --tools=agent
+                       Example: %s mcp --tools=agent
   tui                Launch interactive terminal UI
   search <query>     Search memories [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]
   save <title> <msg> Save a memory  [--type TYPE] [--project PROJECT] [--scope SCOPE]
@@ -2275,7 +2275,7 @@ Commands:
   doctor             Run read-only operational diagnostics [--json] [--project P] [--check CODE]
   context [project]  Show recent context from previous sessions
   stats              Show memory system statistics
-  export [file]      Export all memories to JSON (default: engram-export.json)
+  export [file]      Export all memories to JSON (default: %s)
   import <file>      Import memories from a JSON export file
   projects list      List all projects with observation, session, and prompt counts
   projects consolidate [--all] [--dry-run]
@@ -2283,8 +2283,8 @@ Commands:
                        --all      Scan ALL projects for similar name groups
                        --dry-run  Preview what would be merged (no changes)
   setup [agent]      Install/setup agent integration (opencode, claude-code, gemini-cli, codex)
-  sync               Export new memories as compressed chunk to .engram/
-                         --import   Import new chunks from .engram/ into local DB
+  sync               Export new memories as compressed chunk to %s/
+                         --import   Import new chunks from %s/ into local DB
                          --status   Show sync status
                          --project  Filter export to a specific project
                          --all      Export ALL projects (ignore directory-based filter)
@@ -2314,8 +2314,8 @@ Environment:
   ENGRAM_PORT        Override HTTP server port (default: 7437)
   ENGRAM_PROJECT     Default project hint for serve sync status fallback
   ENGRAM_DATABASE_URL
-                     Postgres DSN for engram cloud serve
-  ENGRAM_CLOUD_HOST  Bind host for engram cloud serve (default: 127.0.0.1)
+	                     Postgres DSN for %s cloud serve
+  ENGRAM_CLOUD_HOST  Bind host for %s cloud serve (default: 127.0.0.1)
   ENGRAM_CLOUD_TOKEN Bearer token required in authenticated cloud serve mode
   ENGRAM_CLOUD_INSECURE_NO_AUTH
                      Set to 1 ONLY for local insecure cloud serve mode (no auth)
@@ -2339,7 +2339,7 @@ MCP Configuration (add to your agent's config):
       }
     }
   }
-`, version)
+`, product.Name, version, product.Name, product.Name, product.ExportFilename, product.SyncDirName, product.SyncDirName, product.Name, product.Name)
 }
 
 func fatal(err error) {
@@ -2414,7 +2414,7 @@ func migrateOrphanedDB(correctDir string) {
 		log.Printf("[%s] found orphaned legacy database at %s, migrating to %s", product.Name, candidate, correctDB)
 
 		if err := os.MkdirAll(correctDir, 0755); err != nil {
-			log.Printf("[engram] migration failed (create dir): %v", err)
+			log.Printf("[%s] migration failed (create dir): %v", product.Name, err)
 			return
 		}
 
@@ -2426,7 +2426,7 @@ func migrateOrphanedDB(correctDir string) {
 				continue
 			}
 			if renameErr := os.Rename(src, dst); renameErr != nil {
-				log.Printf("[engram] migration failed (move %s): %v", filepath.Base(src), renameErr)
+				log.Printf("[%s] migration failed (move %s): %v", product.Name, filepath.Base(src), renameErr)
 				return
 			}
 		}
@@ -2438,7 +2438,7 @@ func migrateOrphanedDB(correctDir string) {
 			os.Remove(orphanDir)
 		}
 
-		log.Printf("[engram] migration complete — memories recovered")
+		log.Printf("[%s] migration complete — memories recovered", product.Name)
 		return
 	}
 }

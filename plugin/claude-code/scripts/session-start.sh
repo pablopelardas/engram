@@ -1,9 +1,9 @@
 #!/bin/bash
-# Engram — SessionStart hook for Claude Code
+# Intuit Engram — SessionStart hook for Claude Code
 #
-# 1. Ensures the engram server is running
-# 2. Creates a session in engram
-# 3. Auto-imports git-synced chunks if .engram/manifest.json exists
+# 1. Ensures the intuit-engram server is running
+# 2. Creates a session in intuit-engram
+# 3. Auto-imports git-synced chunks if .intuit-engram/manifest.json exists
 # 4. Injects Memory Protocol instructions + memory context
 
 ENGRAM_PORT="${ENGRAM_PORT:-7437}"
@@ -23,9 +23,9 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 OLD_PROJECT=$(basename "$CWD")
 PROJECT=$(detect_project "$CWD")
 
-# Ensure engram server is running
+# Ensure intuit-engram server is running
 if ! curl -sf "${ENGRAM_URL}/health" --max-time 1 > /dev/null 2>&1; then
-  engram serve &>/dev/null &
+  intuit-engram serve &>/dev/null &
   sleep 0.5
 fi
 
@@ -50,10 +50,10 @@ if [ -n "$SESSION_ID" ] && [ -n "$PROJECT" ]; then
 fi
 
 # Auto-import git-synced chunks
-if [ -f "${CWD}/.engram/manifest.json" ]; then
+if [ -f "${CWD}/.intuit-engram/manifest.json" ]; then
   (
     cd "$CWD" 2>/dev/null || exit 0
-    IMPORT_LOCK="/tmp/engram-sync-import-$(printf '%s' "$CWD" | cksum | cut -d ' ' -f 1).lock"
+    IMPORT_LOCK="/tmp/intuit-engram-sync-import-$(printf '%s' "$CWD" | cksum | cut -d ' ' -f 1).lock"
     write_import_lock_info() {
       LOCK_INFO_TMP="$IMPORT_LOCK/info.$$"
       printf '%s %s\n' "$LOCK_PID" "$LOCK_NOW" > "$LOCK_INFO_TMP" 2>/dev/null \
@@ -121,9 +121,9 @@ if [ -f "${CWD}/.engram/manifest.json" ]; then
     fi
     trap 'rm -f "$IMPORT_LOCK/info" 2>/dev/null || true; rmdir "$IMPORT_LOCK" 2>/dev/null || true' EXIT
     if command -v timeout >/dev/null 2>&1; then
-      timeout "${IMPORT_TIMEOUT_SECS}s" engram sync --import >/dev/null 2>&1 || true
+      timeout "${IMPORT_TIMEOUT_SECS}s" intuit-engram sync --import >/dev/null 2>&1 || true
     else
-      engram sync --import >/dev/null 2>&1 &
+      intuit-engram sync --import >/dev/null 2>&1 &
       IMPORT_PID=$!
       (sleep "$IMPORT_TIMEOUT_SECS"; kill "$IMPORT_PID" 2>/dev/null || true) &
       WAITER_PID=$!
@@ -139,9 +139,9 @@ CONTEXT=$(curl -sf "${ENGRAM_URL}/context?project=${ENCODED_PROJECT}" --max-time
 
 # Inject Memory Protocol + context — stdout goes to Claude as additionalContext
 cat <<'PROTOCOL'
-## Engram Persistent Memory — ACTIVE PROTOCOL
+## Intuit Engram Persistent Memory — ACTIVE PROTOCOL
 
-You have engram memory tools. This protocol is MANDATORY and ALWAYS ACTIVE.
+You have intuit-engram memory tools. This protocol is MANDATORY and ALWAYS ACTIVE.
 
 ### CORE TOOLS — always available, no ToolSearch needed
 mem_save, mem_search, mem_context, mem_session_summary, mem_get_observation, mem_save_prompt

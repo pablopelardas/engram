@@ -559,13 +559,15 @@ Implementar primero el bloque P0 de aislamiento del fork. Sin eso, cualquier pil
 - ajustar plugin marketplace / nombre de plugin de Claude Code para que no dependa del plugin publico original
 - revisar scripts y plugins embebidos que todavia tienen strings legacy
 - revisar tests y docs publicas que siguen asumiendo `engram`, `cloud.json`, `engram.db`, `.engram`
-- decidir si tambien se renombra el folder de sync del repo (`.engram/`) o si se mantiene por compatibilidad operativa
+- terminar de alinear todos los scripts/tests/docs que todavia asumen el folder legacy o nombres legacy
 
-### Decision provisoria sobre sync folder
+### Decision actual sobre sync folder
 
-Por ahora conviene **mantener `.engram/`** hasta definir migracion completa de tooling y plugins. Cambiar data dir local y MCP/runtime ya reduce el conflicto principal con una instalacion personal del `engram` original. El rename del folder de sync del repo es una segunda etapa porque impacta:
+En este corte se decidio **renombrar tambien el folder de sync del repo a `.intuit-engram/`** para completar el aislamiento operativo del fork. Esto impacta:
 
 - import/export de chunks
 - scripts de plugins
 - docs de operacion
 - potencial compatibilidad con repos que ya tengan historial `.engram/`
+
+Por eso todavia puede quedar compatibilidad legacy pendiente en tests, tooling auxiliar o documentacion vieja, pero el target operativo del fork pasa a ser `.intuit-engram/`.

@@ -49,7 +49,7 @@ func (p cloudDashboardStatusProvider) Status() dashboard.SyncStatus {
 	for _, project := range p.projects {
 		manifest, err := p.store.ReadManifest(ctx, project)
 		if err != nil {
-			log.Printf("[engram] cloud dashboard status manifest read failed for project %q: %v", project, err)
+			log.Printf("[%s] cloud dashboard status manifest read failed for project %q: %v", product.Name, project, err)
 			return dashboard.SyncStatus{
 				Phase:         "degraded",
 				ReasonCode:    constants.ReasonTransportFailed,
@@ -150,12 +150,12 @@ type cloudConfig struct {
 
 func cmdCloud(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud <subcommand> [options]")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud <subcommand> [options]\n", product.Name)
 		fmt.Fprintln(os.Stderr, "supported subcommands: status, enroll, config, serve, upgrade, repair")
 		exitFunc(1)
 	}
 	if os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "help" {
-		fmt.Println("usage: engram cloud <subcommand> [options]")
+		fmt.Printf("usage: %s cloud <subcommand> [options]\n", product.Name)
 		fmt.Println("supported subcommands: status, enroll, config, serve, upgrade, repair")
 		return
 	}
@@ -182,7 +182,7 @@ func cmdCloud(cfg store.Config) {
 
 func cmdCloudRepair() {
 	if len(os.Args) < 4 || os.Args[3] == "--help" || os.Args[3] == "-h" || os.Args[3] == "help" {
-		fmt.Println("usage: engram cloud repair materialize-mutations --project <name> (--dry-run|--apply)")
+		fmt.Printf("usage: %s cloud repair materialize-mutations --project <name> (--dry-run|--apply)\n", product.Name)
 		fmt.Println("repairs existing cloud_mutations into compatible cloud_chunks without deleting remote data")
 		return
 	}
@@ -195,7 +195,7 @@ func cmdCloudRepair() {
 	}
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud repair materialize-mutations --project <name> (--dry-run|--apply)")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud repair materialize-mutations --project <name> (--dry-run|--apply)\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -203,7 +203,7 @@ func cmdCloudRepair() {
 	dryRun := hasCloudUpgradeFlag(os.Args[4:], "--dry-run")
 	apply := hasCloudUpgradeFlag(os.Args[4:], "--apply")
 	if dryRun == apply {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud repair materialize-mutations --project <name> (--dry-run|--apply)")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud repair materialize-mutations --project <name> (--dry-run|--apply)\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: exactly one of --dry-run or --apply is required")
 		exitFunc(1)
 		return
@@ -230,16 +230,16 @@ func cmdCloudRepair() {
 
 func cmdCloudUpgrade(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade <doctor|repair|bootstrap|status|rollback> --project <name>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade <doctor|repair|bootstrap|status|rollback> --project <name>\n", product.Name)
 		exitFunc(1)
 		return
 	}
 	command := strings.TrimSpace(strings.ToLower(os.Args[3]))
 	if command == "--help" || command == "-h" || command == "help" {
-		fmt.Println("engram cloud upgrade")
+		fmt.Printf("%s cloud upgrade\n", product.Name)
 		fmt.Println("workflow: doctor -> repair -> bootstrap -> status/rollback")
 		fmt.Println("cloud is opt-in replication/shared access; local SQLite remains source of truth")
-		fmt.Println("usage: engram cloud upgrade <doctor|repair|bootstrap|status|rollback> --project <name>")
+		fmt.Printf("usage: %s cloud upgrade <doctor|repair|bootstrap|status|rollback> --project <name>\n", product.Name)
 		return
 	}
 	switch command {
@@ -263,7 +263,7 @@ func cmdCloudUpgrade(cfg store.Config) {
 func cmdCloudUpgradeDoctor(cfg store.Config) {
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade doctor --project <name>")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade doctor --project <name>\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -324,7 +324,7 @@ func cmdCloudUpgradeDoctor(cfg store.Config) {
 			Status:  engramsync.UpgradeStatusBlocked,
 			Class:   engramsync.UpgradeReasonClassRepairable,
 			Code:    store.UpgradeReasonRepairableLegacyMutationPayload,
-			Message: fmt.Sprintf("project %q has %d repairable legacy mutation payload issue(s); run `engram cloud upgrade repair --project %s --apply`", project, legacyReport.RepairableCount, project),
+			Message: fmt.Sprintf("project %q has %d repairable legacy mutation payload issue(s); run `%s cloud upgrade repair --project %s --apply`", project, legacyReport.RepairableCount, product.Name, project),
 		}
 	}
 
@@ -384,7 +384,7 @@ func parseCloudUpgradeProjectArg(args []string) string {
 func cmdCloudUpgradeRepair(cfg store.Config) {
 	project := parseCloudUpgradeProjectArg(os.Args[4:])
 	if project == "" {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud upgrade repair --project <name> [--dry-run|--apply]")
+		fmt.Fprintf(os.Stderr, "usage: %s cloud upgrade repair --project <name> [--dry-run|--apply]\n", product.Name)
 		fmt.Fprintln(os.Stderr, "error: --project is required")
 		exitFunc(1)
 		return
@@ -453,7 +453,7 @@ func cmdCloudUpgradeBootstrap(cfg store.Config) {
 		return
 	}
 	if legacyReport.RepairableCount > 0 {
-		fatal(fmt.Errorf("legacy mutation payloads require repair before bootstrap: run `engram cloud upgrade repair --project %s --apply`", project))
+		fatal(fmt.Errorf("legacy mutation payloads require repair before bootstrap: run `%s cloud upgrade repair --project %s --apply`", product.Name, project))
 		return
 	}
 
