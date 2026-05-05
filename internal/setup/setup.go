@@ -289,6 +289,150 @@ func Install(agentName string) (*Result, error) {
 	}
 }
 
+// detectEngramConflict checks if the original "engram" MCP server is already
+// registered for the given agent. Returns (true, details) if a conflict is
+// detected, (false, "") otherwise.
+func detectEngramConflict(agentName string) (bool, string) {
+	switch agentName {
+	case "opencode":
+		return detectEngramConflictOpenCode()
+	case "claude-code":
+		return detectEngramConflictClaudeCode()
+	case "gemini-cli":
+		return detectEngramConflictGemini()
+	case "codex":
+		return detectEngramConflictCodex()
+	}
+	return false, ""
+}
+
+// printCoexistenceGuide prints a warning and instructions when both engram
+// and intuit-engram are detected on the same agent.
+func printCoexistenceGuide(agentName string, details string) {
+	fmt.Fprintf(os.Stderr, "\n⚠️  WARNING: Both 'engram' and '%s' are installed for %s.\n", product.Name, agentName)
+	fmt.Fprintf(os.Stderr, "   %s\n", details)
+	fmt.Fprintf(os.Stderr, "\n   COEXISTENCE GUIDE:\n")
+	fmt.Fprintf(os.Stderr, "   • intuit-engram → Intuit corporate projects (has .intuit-engram/config.json)\n")
+	fmt.Fprintf(os.Stderr, "   • engram        → Personal/OSS projects (no corporate metadata)\n")
+	fmt.Fprintf(os.Stderr, "\n   The agent will auto-detect which to use based on the current project.\n")
+	fmt.Fprintf(os.Stderr, "   See: https://github.com/Gentleman-Programming/engram/blob/main/docs/AGENT-SETUP.md\n\n")
+}
+
+// ─── Conflict Detection: OpenCode ────────────────────────────────────────────
+
+func detectEngramConflictOpenCode() (bool, string) {
+	configPath := openCodeConfigPath()
+	data, err := readFileFn(configPath)
+	if err != nil {
+		return false, ""
+	}
+	cleaned := stripJSONC(data)
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal(cleaned, &config); err != nil {
+		return false, ""
+	}
+	var mcpBlock map[string]json.RawMessage
+	if raw, exists := config["mcp"]; exists {
+		if err := json.Unmarshal(raw, &mcpBlock); err != nil {
+			return false, ""
+		}
+	}
+	if _, exists := mcpBlock["engram"]; exists {
+		return true, "engram MCP server found in opencode.json"
+	}
+	return false, ""
+}
+
+// ─── Conflict Detection: Claude Code ─────────────────────────────────────────
+
+func detectEngramConflictClaudeCode() (bool, string) {
+	settingsPath := claudeCodeSettingsPath()
+	data, err := readFileFn(settingsPath)
+	if err != nil {
+		// Check fallback: ~/.claude/mcp/engram.json
+		home, _ := userHomeDir()
+		fallback := filepath.Join(home, ".claude", "mcp", "engram.json")
+		if _, err := statFn(fallback); err == nil {
+			return true, "engram MCP config found at ~/.claude/mcp/engram.json"
+		}
+		return false, ""
+	}
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal(data, &config); err != nil {
+		return false, ""
+	}
+	// Check enabledPlugins
+	if raw, exists := config["enabledPlugins"]; exists {
+		var plugins map[string]bool
+		if err := json.Unmarshal(raw, &plugins); err == nil {
+			for name := range plugins {
+				if strings.HasPrefix(name, "engram@") || name == "engram" {
+					return true, fmt.Sprintf("engram plugin enabled: %s", name)
+				}
+			}
+		}
+	}
+	// Check permissions.allow for engram tools
+	if raw, exists := config["permissions"]; exists {
+		var perms map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &perms); err == nil {
+			if rawAllow, exists := perms["allow"]; exists {
+				var allowList []string
+				if err := json.Unmarshal(rawAllow, &allowList); err == nil {
+					for _, tool := range allowList {
+						if strings.Contains(tool, "__engram__") || strings.Contains(tool, "_engram_") {
+							return true, "engram tools found in permissions.allow"
+						}
+					}
+				}
+			}
+		}
+	}
+	return false, ""
+}
+
+// ─── Conflict Detection: Gemini CLI ──────────────────────────────────────────
+
+func detectEngramConflictGemini() (bool, string) {
+	configPath := geminiConfigPath()
+	data, err := readFileFn(configPath)
+	if err != nil {
+		return false, ""
+	}
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal(data, &config); err != nil {
+		return false, ""
+	}
+	var mcpServers map[string]json.RawMessage
+	if raw, exists := config["mcpServers"]; exists {
+		if err := json.Unmarshal(raw, &mcpServers); err != nil {
+			return false, ""
+		}
+	}
+	if _, exists := mcpServers["engram"]; exists {
+		return true, "engram MCP server found in gemini settings"
+	}
+	return false, ""
+}
+
+// ─── Conflict Detection: Codex ───────────────────────────────────────────────
+
+func detectEngramConflictCodex() (bool, string) {
+	configPath := codexConfigPath()
+	data, err := readFileFn(configPath)
+	if err != nil {
+		return false, ""
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[mcp_servers.engram]" {
+			return true, "engram MCP server found in codex config.toml"
+		}
+	}
+	return false, ""
+}
+
 // ─── OpenCode ────────────────────────────────────────────────────────────────
 
 // patchEngramBINLine rewrites the ENGRAM_BIN constant declaration in the
@@ -329,6 +473,11 @@ func patchEngramBINLine(src []byte, absBin string) []byte {
 }
 
 func installOpenCode() (*Result, error) {
+	// Check for engram conflict before installing
+	if conflict, details := detectEngramConflict("opencode"); conflict {
+		printCoexistenceGuide("OpenCode", details)
+	}
+
 	dir := openCodePluginDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("create plugin dir %s: %w", dir, err)
@@ -599,6 +748,11 @@ func installClaudeCode() (*Result, error) {
 		return nil, fmt.Errorf("claude CLI not found in PATH — install Claude Code first: https://docs.anthropic.com/en/docs/claude-code")
 	}
 
+	// Check for engram conflict before installing
+	if conflict, details := detectEngramConflict("claude-code"); conflict {
+		printCoexistenceGuide("Claude Code", details)
+	}
+
 	// Step 3: Write a durable user-level MCP config at ~/.claude/mcp/intuit-engram.json
 	// with the absolute binary path. This survives plugin cache auto-updates and
 	// works on Windows where MCP subprocesses may not inherit PATH.
@@ -764,6 +918,11 @@ func AddClaudeCodeAllowlist() error {
 // ─── Gemini CLI ──────────────────────────────────────────────────────────────
 
 func installGeminiCLI() (*Result, error) {
+	// Check for engram conflict before installing
+	if conflict, details := detectEngramConflict("gemini-cli"); conflict {
+		printCoexistenceGuide("Gemini CLI", details)
+	}
+
 	path := geminiConfigPath()
 	if err := injectGeminiMCPFn(path); err != nil {
 		return nil, err
@@ -905,6 +1064,11 @@ func removeGeminiEnvOverride() {
 // ─── Codex ───────────────────────────────────────────────────────────────────
 
 func installCodex() (*Result, error) {
+	// Check for engram conflict before installing
+	if conflict, details := detectEngramConflict("codex"); conflict {
+		printCoexistenceGuide("Codex", details)
+	}
+
 	path := codexConfigPath()
 
 	instructionsPath, err := writeCodexMemoryInstructionFilesFn()

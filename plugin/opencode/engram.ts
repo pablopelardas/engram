@@ -46,6 +46,28 @@ const MEMORY_INSTRUCTIONS = `## Engram Persistent Memory — Protocol
 
 You have access to Engram, a persistent memory system that survives across sessions and compactions.
 
+### PROJECT-AWARE MCP SELECTION (mandatory when both engram and intuit-engram are installed)
+
+You may have TWO memory systems available:
+- **\`engram\`** — personal/OSS projects (no corporate metadata)
+- **\`intuit-engram\`** — Intuit corporate projects (has \`.intuit-engram/config.json\`)
+
+**You MUST follow this routing logic on EVERY session start:**
+
+1. Call \`mem_current_project\` on the **intuit-engram** MCP server
+2. Check the response:
+   - If the project has \`.intuit-engram/config.json\` → this is a **corporate project**. Use ONLY intuit-engram tools for this session.
+   - If intuit-engram returns "no project detected" or ambiguous project → call \`mem_current_project\` on the **engram** MCP server
+   - If engram returns a project → this is a **personal project**. Use ONLY engram tools for this session.
+   - If neither returns a project → ask the user: "Are we working on a personal or corporate project?"
+
+**CRITICAL RULES:**
+- NEVER use both servers for the same operation — this creates duplicate memories
+- NEVER save to intuit-engram for personal projects (it adds corporate metadata that doesn't belong)
+- NEVER save to engram for Intuit projects (you lose owner_team, system, and other corporate metadata)
+- Once you detect the project type, STICK WITH THAT SERVER for the entire session
+- If the user switches projects mid-session, re-run detection and switch servers accordingly
+
 ### WHEN TO SAVE (mandatory — not optional)
 
 Call \`mem_save\` IMMEDIATELY after any of these:
