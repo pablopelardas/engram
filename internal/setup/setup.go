@@ -741,6 +741,30 @@ func stripJSONC(data []byte) []byte {
 
 // ─── Claude Code ─────────────────────────────────────────────────────────────
 
+// claudeCodePluginDir returns the path to the Claude Code plugin directory
+// inside the engram repository.
+func claudeCodePluginDir() string {
+	// Try to find plugin/claude-code/ relative to the binary.
+	exe, err := osExecutable()
+	if err == nil {
+		exeDir := filepath.Dir(exe)
+		// Binary may be at repo-root/intuit-engram.exe or repo-root/cmd/intuit-engram/intuit-engram.exe
+		candidates := []string{
+			filepath.Join(exeDir, "plugin", "claude-code"),
+			filepath.Join(exeDir, "..", "..", "plugin", "claude-code"),
+			filepath.Join(exeDir, "..", "plugin", "claude-code"),
+		}
+		for _, candidate := range candidates {
+			if info, err := statFn(candidate); err == nil && info.IsDir() {
+				return candidate
+			}
+		}
+	}
+	// Fallback: current working directory
+	cwd, _ := os.Getwd()
+	return filepath.Join(cwd, "plugin", "claude-code")
+}
+
 func installClaudeCode() (*Result, error) {
 	// Check that claude CLI is available
 	_, err := lookPathFn("claude")
@@ -753,17 +777,54 @@ func installClaudeCode() (*Result, error) {
 		printCoexistenceGuide("Claude Code", details)
 	}
 
-	// Step 3: Write a durable user-level MCP config at ~/.claude/mcp/intuit-engram.json
-	// with the absolute binary path. This survives plugin cache auto-updates and
-	// works on Windows where MCP subprocesses may not inherit PATH.
+	// Step 1: Install the full plugin (MCP + skills + hooks) via claude plugin install
+	pluginDir := claudeCodePluginDir()
 	files := 0
-	if err := writeClaudeCodeUserMCPFn(); err != nil {
-		// Non-fatal: the plugin still works via the plugin cache .mcp.json.
-		// Warn so Windows users know to check their PATH if tools don't appear.
-		fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/%s.json): %v\n", product.Name, err)
-		fmt.Fprintf(os.Stderr, "  The plugin is installed but MCP may not start on Windows if %s is not in PATH.\n", product.Name)
+	if info, err := statFn(pluginDir); err == nil && info.IsDir() {
+		// Copy plugin to temp dir and patch .mcp.json with absolute binary path
+		tempDir, err := os.MkdirTemp("", "intuit-engram-claude-plugin-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not create temp dir: %v\n", err)
+		} else {
+			defer os.RemoveAll(tempDir)
+			if err := copyDir(pluginDir, tempDir); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not copy plugin to temp: %v\n", err)
+			} else {
+				mcpPath := filepath.Join(tempDir, ".mcp.json")
+				if err := patchClaudeCodePluginMCP(mcpPath); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: could not patch plugin .mcp.json: %v\n", err)
+				} else {
+					// Install plugin via claude CLI
+					_, installErr := runCommand("claude", "plugin", "install", tempDir)
+					if installErr != nil {
+						fmt.Fprintf(os.Stderr, "warning: claude plugin install failed: %v\n", installErr)
+					} else {
+						files += 3 // plugin.json + .mcp.json + skills
+					}
+				}
+			}
+		}
 	} else {
-		files = 1
+		fmt.Fprintf(os.Stderr, "warning: plugin directory not found at %s\n", pluginDir)
+	}
+
+	if files == 0 {
+		fmt.Fprintf(os.Stderr, "  Falling back to user-level MCP config.\n")
+	}
+
+	// Step 2: Add permissions allowlist (always, even if plugin install failed)
+	if err := addClaudeCodeAllowlistFn(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not update permissions allowlist: %v\n", err)
+	}
+
+	// Step 3: Fallback — write durable user-level MCP config if plugin install failed
+	if files == 0 {
+		if err := writeClaudeCodeUserMCPFn(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/%s.json): %v\n", product.Name, err)
+			fmt.Fprintf(os.Stderr, "  MCP tools may not be available.\n")
+		} else {
+			files = 1
+		}
 	}
 
 	return &Result{
@@ -771,6 +832,76 @@ func installClaudeCode() (*Result, error) {
 		Destination: claudeCodeMCPDir(),
 		Files:       files,
 	}, nil
+}
+
+// patchClaudeCodePluginMCP updates the plugin's .mcp.json to use the absolute
+// binary path instead of the bare command name. This ensures the MCP server
+// starts correctly even when the binary is not in PATH.
+func patchClaudeCodePluginMCP(mcpPath string) error {
+	data, err := readFileFn(mcpPath)
+	if err != nil {
+		return fmt.Errorf("read .mcp.json: %w", err)
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("parse .mcp.json: %w", err)
+	}
+
+	mcpServers, ok := config["mcpServers"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("mcpServers block not found")
+	}
+
+	server, ok := mcpServers[product.Name].(map[string]any)
+	if !ok {
+		return fmt.Errorf("server %q not found", product.Name)
+	}
+
+	exe, err := osExecutable()
+	if err != nil {
+		return fmt.Errorf("resolve binary: %w", err)
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+
+	server["command"] = exe
+	mcpServers[product.Name] = server
+	config["mcpServers"] = mcpServers
+
+	output, err := jsonMarshalIndentFn(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal .mcp.json: %w", err)
+	}
+
+	if err := writeFileFn(mcpPath, output, 0644); err != nil {
+		return fmt.Errorf("write .mcp.json: %w", err)
+	}
+
+	return nil
+}
+
+// copyDir recursively copies src directory to dst.
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+		data, err := readFileFn(path)
+		if err != nil {
+			return err
+		}
+		return writeFileFn(dstPath, data, info.Mode())
+	})
 }
 
 // claudeCodeMCPDir returns the directory for user-level Claude Code MCP configs.
