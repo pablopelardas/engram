@@ -37,6 +37,7 @@ func resetSetupSeams(t *testing.T) {
 	oldAddClaudeCodeAllowlistFn := addClaudeCodeAllowlistFn
 	oldOsExecutable := osExecutable
 	oldWriteClaudeCodeUserMCPFn := writeClaudeCodeUserMCPFn
+	oldFindRepoRootFn := findRepoRootFn
 
 	t.Cleanup(func() {
 		runtimeGOOS = oldRuntimeGOOS
@@ -60,6 +61,7 @@ func resetSetupSeams(t *testing.T) {
 		addClaudeCodeAllowlistFn = oldAddClaudeCodeAllowlistFn
 		osExecutable = oldOsExecutable
 		writeClaudeCodeUserMCPFn = oldWriteClaudeCodeUserMCPFn
+		findRepoRootFn = oldFindRepoRootFn
 	})
 }
 
@@ -723,6 +725,8 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		resetSetupSeams(t)
 		useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
+		findRepoRootFn = func() string { return "" }
+		runCommand = func(string, ...string) ([]byte, error) { return nil, errors.New("not found") }
 		writeClaudeCodeUserMCPFn = func() error { return errors.New("permission denied") }
 
 		result, err := installClaudeCode()
@@ -738,6 +742,8 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		resetSetupSeams(t)
 		home := useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
+		findRepoRootFn = func() string { return "" }
+		runCommand = func(string, ...string) ([]byte, error) { return nil, errors.New("not found") }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
 
 		result, err := installClaudeCode()
@@ -747,7 +753,7 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		if result.Agent != "claude-code" {
 			t.Fatalf("unexpected agent: %q", result.Agent)
 		}
-		// When writeClaudeCodeUserMCP succeeds, files == 1
+		// When plugin install fails and writeClaudeCodeUserMCP succeeds, files == 1
 		if result.Files != 1 {
 			t.Fatalf("expected 1 file when user MCP write succeeds, got %d", result.Files)
 		}
@@ -762,6 +768,8 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		resetSetupSeams(t)
 		home := useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
+		findRepoRootFn = func() string { return "" }
+		runCommand = func(string, ...string) ([]byte, error) { return nil, errors.New("not found") }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
 
 		result, err := installClaudeCode()
@@ -781,6 +789,8 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		resetSetupSeams(t)
 		useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
+		findRepoRootFn = func() string { return "" }
+		runCommand = func(string, ...string) ([]byte, error) { return nil, errors.New("not found") }
 		writeClaudeCodeUserMCPFn = func() error { return nil }
 
 		if _, err := installClaudeCode(); err != nil {
@@ -792,14 +802,15 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 		resetSetupSeams(t)
 		useTestHome(t)
 		lookPathFn = func(string) (string, error) { return "claude", nil }
-		runCommand = func(string, ...string) ([]byte, error) { return []byte("ok"), nil }
+		findRepoRootFn = func() string { return "" }
+		runCommand = func(string, ...string) ([]byte, error) { return nil, errors.New("not found") }
 		writeClaudeCodeUserMCPFn = func() error { return errors.New("disk full") }
 
 		result, err := installClaudeCode()
 		if err != nil {
 			t.Fatalf("user MCP write failure should be non-fatal, got %v", err)
 		}
-		// files == 0 when writeClaudeCodeUserMCP fails
+		// files == 0 when both plugin install and writeClaudeCodeUserMCP fail
 		if result.Files != 0 {
 			t.Fatalf("expected 0 files when user MCP write fails, got %d", result.Files)
 		}

@@ -53,6 +53,7 @@ var (
 	injectCodexMemoryConfigFn          = injectCodexMemoryConfig
 	addClaudeCodeAllowlistFn           = AddClaudeCodeAllowlist
 	writeClaudeCodeUserMCPFn           = writeClaudeCodeUserMCP
+	findRepoRootFn                     = findRepoRoot
 )
 
 //go:embed plugins/opencode/*
@@ -777,47 +778,34 @@ func installClaudeCode() (*Result, error) {
 		printCoexistenceGuide("Claude Code", details)
 	}
 
-	// Step 1: Install the full plugin (MCP + skills + hooks) via claude plugin install
-	pluginDir := claudeCodePluginDir()
+	// Step 1: Find repo root and patch .mcp.json with absolute binary path
+	repoDir := findRepoRootFn()
+	mcpPath := filepath.Join(repoDir, "plugin", "claude-code", ".mcp.json")
+	if err := patchClaudeCodePluginMCP(mcpPath); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not patch plugin .mcp.json: %v\n", err)
+	}
+
+	// Step 2: Register marketplace and install plugin
 	files := 0
-	if info, err := statFn(pluginDir); err == nil && info.IsDir() {
-		// Copy plugin to temp dir and patch .mcp.json with absolute binary path
-		tempDir, err := os.MkdirTemp("", "intuit-engram-claude-plugin-*")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not create temp dir: %v\n", err)
-		} else {
-			defer os.RemoveAll(tempDir)
-			if err := copyDir(pluginDir, tempDir); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not copy plugin to temp: %v\n", err)
-			} else {
-				mcpPath := filepath.Join(tempDir, ".mcp.json")
-				if err := patchClaudeCodePluginMCP(mcpPath); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: could not patch plugin .mcp.json: %v\n", err)
-				} else {
-					// Install plugin via claude CLI
-					_, installErr := runCommand("claude", "plugin", "install", tempDir)
-					if installErr != nil {
-						fmt.Fprintf(os.Stderr, "warning: claude plugin install failed: %v\n", installErr)
-					} else {
-						files += 3 // plugin.json + .mcp.json + skills
-					}
-				}
-			}
-		}
+	_, marketErr := runCommand("claude", "plugin", "marketplace", "add", repoDir)
+	if marketErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not add marketplace: %v\n", marketErr)
+	}
+
+	_, installErr := runCommand("claude", "plugin", "install", product.Name)
+	if installErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not install plugin: %v\n", installErr)
+		fmt.Fprintf(os.Stderr, "  Try manually: cd %s && claude plugin marketplace add . && claude plugin install %s\n", repoDir, product.Name)
 	} else {
-		fmt.Fprintf(os.Stderr, "warning: plugin directory not found at %s\n", pluginDir)
+		files += 3 // plugin.json + .mcp.json + skills
 	}
 
-	if files == 0 {
-		fmt.Fprintf(os.Stderr, "  Falling back to user-level MCP config.\n")
-	}
-
-	// Step 2: Add permissions allowlist (always, even if plugin install failed)
+	// Step 3: Add permissions allowlist (always)
 	if err := addClaudeCodeAllowlistFn(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not update permissions allowlist: %v\n", err)
 	}
 
-	// Step 3: Fallback — write durable user-level MCP config if plugin install failed
+	// Step 4: Fallback — write durable user-level MCP config if plugin install failed
 	if files == 0 {
 		if err := writeClaudeCodeUserMCPFn(); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/%s.json): %v\n", product.Name, err)
@@ -832,6 +820,30 @@ func installClaudeCode() (*Result, error) {
 		Destination: claudeCodeMCPDir(),
 		Files:       files,
 	}, nil
+}
+
+// findRepoRoot returns the root directory of the intuit-engram repository.
+// It searches relative to the binary location and falls back to current directory.
+func findRepoRoot() string {
+	exe, err := osExecutable()
+	if err == nil {
+		exeDir := filepath.Dir(exe)
+		// Binary may be at repo-root/intuit-engram.exe or repo-root/cmd/intuit-engram/intuit-engram.exe
+		candidates := []string{
+			exeDir,
+			filepath.Join(exeDir, "..", ".."),
+			filepath.Join(exeDir, ".."),
+		}
+		for _, candidate := range candidates {
+			marketplaceFile := filepath.Join(candidate, ".claude-plugin", "marketplace.json")
+			if _, err := statFn(marketplaceFile); err == nil {
+				return candidate
+			}
+		}
+	}
+	// Fallback: current working directory
+	cwd, _ := os.Getwd()
+	return cwd
 }
 
 // patchClaudeCodePluginMCP updates the plugin's .mcp.json to use the absolute
