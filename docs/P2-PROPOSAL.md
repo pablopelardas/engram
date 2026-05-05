@@ -34,11 +34,16 @@ ALTER TABLE observations ADD COLUMN canonical_status TEXT
 - `canonical`: visible para todos los proyectos
 - `deprecated`: aparece marcada, puede filtrarse
 
-### MCP tools nuevos
+### MCP tools (agente)
 
-- `mem_submit` — guarda como `draft` (reemplaza `mem_save` para org-wide)
-- `mem_promote` — dev/lead eleva de `draft` → `reviewed` o `canonical`
-- `mem_deprecate` — marca como `deprecated`
+- `mem_save` — guarda SIEMPRE como `draft`. El agente no decide estado, solo guarda.
+
+### Dashboard web (curación)
+
+- **Aprobar** (→ `reviewed`) — lead/dev valida que es correcto
+- **Elevar** (→ `canonical`) — lead marca como referencia oficial
+- **Deprecar** (→ `deprecated`) — marca como histórico, no vigente
+- **Rechazar** (borrar) — elimina el draft
 
 ### Campos adicionales
 
