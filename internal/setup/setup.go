@@ -785,7 +785,12 @@ func installClaudeCode() (*Result, error) {
 		fmt.Fprintf(os.Stderr, "warning: could not patch plugin .mcp.json: %v\n", err)
 	}
 
-	// Step 2: Register marketplace and install plugin
+	// Step 2: Copy skill to ~/.claude/skills/ (global skills dir)
+	if err := installClaudeCodeSkill(repoDir); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not install skill: %v\n", err)
+	}
+
+	// Step 3: Register marketplace and install plugin
 	files := 0
 	_, marketErr := runCommand("claude", "plugin", "marketplace", "add", repoDir)
 	if marketErr != nil {
@@ -798,14 +803,18 @@ func installClaudeCode() (*Result, error) {
 		fmt.Fprintf(os.Stderr, "  Try manually: cd %s && claude plugin marketplace add . && claude plugin install %s\n", repoDir, product.Name)
 	} else {
 		files += 3 // plugin.json + .mcp.json + skills
+		// Step 3b: Patch MCP config in Claude Code cache (it copies the unpatched original)
+		if err := patchClaudeCodeCacheMCP(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not patch MCP in cache: %v\n", err)
+		}
 	}
 
-	// Step 3: Add permissions allowlist (always)
+	// Step 4: Add permissions allowlist (always)
 	if err := addClaudeCodeAllowlistFn(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not update permissions allowlist: %v\n", err)
 	}
 
-	// Step 4: Fallback — write durable user-level MCP config if plugin install failed
+	// Step 5: Fallback — write durable user-level MCP config if plugin install failed
 	if files == 0 {
 		if err := writeClaudeCodeUserMCPFn(); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not write user MCP config (~/.claude/mcp/%s.json): %v\n", product.Name, err)
@@ -820,6 +829,56 @@ func installClaudeCode() (*Result, error) {
 		Destination: claudeCodeMCPDir(),
 		Files:       files,
 	}, nil
+}
+
+// installClaudeCodeSkill copies the skill from the repo to Claude Code's global
+// skills directory (~/.claude/skills/intuit-engram-memory/).
+func installClaudeCodeSkill(repoDir string) error {
+	skillSrc := filepath.Join(repoDir, "plugin", "claude-code", "skills", "memory", "SKILL.md")
+	home, err := userHomeDir()
+	if err != nil {
+		return fmt.Errorf("resolve home dir: %w", err)
+	}
+	skillDir := filepath.Join(home, ".claude", "skills", product.Name+"-memory")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		return fmt.Errorf("create skill dir: %w", err)
+	}
+	skillDst := filepath.Join(skillDir, "SKILL.md")
+	data, err := readFileFn(skillSrc)
+	if err != nil {
+		return fmt.Errorf("read skill: %w", err)
+	}
+	if err := writeFileFn(skillDst, data, 0644); err != nil {
+		return fmt.Errorf("write skill: %w", err)
+	}
+	return nil
+}
+
+// patchClaudeCodeCacheMCP updates the .mcp.json in Claude Code's plugin cache
+// to use the absolute binary path. Claude Code copies the plugin from the repo
+// verbatim, so it gets the unpatched .mcp.json with the bare command name.
+func patchClaudeCodeCacheMCP() error {
+	home, err := userHomeDir()
+	if err != nil {
+		return fmt.Errorf("resolve home dir: %w", err)
+	}
+	// Find the cached .mcp.json — it lives under plugins/cache/{marketplace}/{plugin}/{version}/
+	cacheDir := filepath.Join(home, ".claude", "plugins", "cache")
+	var mcpPath string
+	_ = filepath.Walk(cacheDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if info.Name() == ".mcp.json" && strings.Contains(path, product.Name) {
+			mcpPath = path
+			return filepath.SkipDir // stop after finding the first match
+		}
+		return nil
+	})
+	if mcpPath == "" {
+		return fmt.Errorf("could not find cached .mcp.json for %s", product.Name)
+	}
+	return patchClaudeCodePluginMCP(mcpPath)
 }
 
 // findRepoRoot returns the root directory of the intuit-engram repository.
