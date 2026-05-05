@@ -446,9 +446,9 @@ func TestCmdSaveAndSearch(t *testing.T) {
 
 func TestCmdTimeline(t *testing.T) {
 	cfg := testConfig(t)
-	mustSeedObservation(t, cfg, "s-1", "proj", "note", "first", "first content", "project")
-	focusID := mustSeedObservation(t, cfg, "s-1", "proj", "note", "focus", "focus content", "project")
-	mustSeedObservation(t, cfg, "s-1", "proj", "note", "third", "third content", "project")
+	mustSeedObservation(t, cfg, "s-1", "proj", "decision", "first", "first content", "project")
+	focusID := mustSeedObservation(t, cfg, "s-1", "proj", "decision", "focus", "focus content", "project")
+	mustSeedObservation(t, cfg, "s-1", "proj", "decision", "third", "third content", "project")
 
 	withArgs(t, "engram", "timeline", strconv.FormatInt(focusID, 10), "--before", "1", "--after", "1")
 	stdout, stderr := captureOutput(t, func() { cmdTimeline(cfg) })
@@ -554,7 +554,7 @@ func TestCmdSyncStatusExportAndImport(t *testing.T) {
 	exportCfg := testConfig(t)
 	importCfg := testConfig(t)
 
-	mustSeedObservation(t, exportCfg, "s-sync", "sync-project", "note", "sync title", "sync content", "project")
+	mustSeedObservation(t, exportCfg, "s-sync", "sync-project", "decision", "sync title", "sync content", "project")
 
 	withArgs(t, "engram", "sync", "--status")
 	statusOut, statusErr := captureOutput(t, func() { cmdSync(exportCfg) })
@@ -768,7 +768,7 @@ func TestMainExitHelper(t *testing.T) {
 
 func TestCmdSearchLocalMode(t *testing.T) {
 	cfg := testConfig(t)
-	mustSeedObservation(t, cfg, "s-local", "proj-local", "note", "local-result", "local content for search", "project")
+	mustSeedObservation(t, cfg, "s-local", "proj-local", "decision", "local-result", "local content for search", "project")
 
 	withArgs(t, "engram", "search", "local", "--project", "proj-local")
 	stdout, stderr := captureOutput(t, func() { cmdSearch(cfg) })
@@ -799,7 +799,7 @@ func TestCmdProjectsList(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed observations for two projects
-	mustSeedObservation(t, cfg, "s-alpha", "alpha", "note", "alpha-note", "alpha content", "project")
+	mustSeedObservation(t, cfg, "s-alpha", "alpha", "decision", "alpha-note", "alpha content", "project")
 	mustSeedObservation(t, cfg, "s-alpha", "alpha", "bugfix", "alpha-bug", "alpha bug", "project")
 	mustSeedObservation(t, cfg, "s-beta", "beta", "decision", "beta-note", "beta content", "project")
 
@@ -842,7 +842,7 @@ func TestCmdProjectsConsolidateNoSimilar(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed a single unique project
-	mustSeedObservation(t, cfg, "s-unique", "unique-project", "note", "unique note", "content", "project")
+	mustSeedObservation(t, cfg, "s-unique", "unique-project", "decision", "unique note", "content", "project")
 
 	// Set cwd to a temp dir named "unique-project" with no git
 	workDir := filepath.Join(t.TempDir(), "unique-project")
@@ -870,8 +870,8 @@ func TestCmdProjectsConsolidateDryRun(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed a canonical and a similar variant (substring match, distinct after normalize)
-	mustSeedObservation(t, cfg, "s-eng", "engram", "note", "eng note", "content", "project")
-	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "note", "engm note", "content", "project")
+	mustSeedObservation(t, cfg, "s-eng", "engram", "decision", "eng note", "content", "project")
+	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "decision", "engm note", "content", "project")
 
 	old := detectProject
 	detectProject = func(string) string { return "engram" }
@@ -905,8 +905,8 @@ func TestCmdProjectsConsolidateSingleProject(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed canonical and a similar variant (substring match, distinct after normalize)
-	mustSeedObservation(t, cfg, "s-eng", "engram", "note", "eng note", "content", "project")
-	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "note", "engm note", "content", "project")
+	mustSeedObservation(t, cfg, "s-eng", "engram", "decision", "eng note", "content", "project")
+	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "decision", "engm note", "content", "project")
 
 	old := detectProject
 	detectProject = func(string) string { return "engram" }
@@ -950,8 +950,8 @@ func TestCmdProjectsConsolidateAllDryRun(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed similar projects (substring match, stays distinct after normalize)
-	mustSeedObservation(t, cfg, "s-eng", "engram", "note", "eng note", "content", "project")
-	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "note", "engm note", "content", "project")
+	mustSeedObservation(t, cfg, "s-eng", "engram", "decision", "eng note", "content", "project")
+	mustSeedObservation(t, cfg, "s-engm", "engram-memory", "decision", "engm note", "content", "project")
 
 	withArgs(t, "engram", "projects", "consolidate", "--all", "--dry-run")
 	stdout, stderr := captureOutput(t, func() { cmdProjectsConsolidate(cfg) })
@@ -967,9 +967,9 @@ func TestCmdProjectsAllNoGroups(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Seed completely unrelated projects
-	mustSeedObservation(t, cfg, "s-foo", "fooproject", "note", "foo", "content", "project")
-	mustSeedObservation(t, cfg, "s-bar", "barproject", "note", "bar", "content", "project")
-	mustSeedObservation(t, cfg, "s-qux", "quxproject", "note", "qux", "content", "project")
+	mustSeedObservation(t, cfg, "s-foo", "fooproject", "decision", "foo", "content", "project")
+	mustSeedObservation(t, cfg, "s-bar", "barproject", "decision", "bar", "content", "project")
+	mustSeedObservation(t, cfg, "s-qux", "quxproject", "decision", "qux", "content", "project")
 
 	withArgs(t, "engram", "projects", "consolidate", "--all")
 	stdout, stderr := captureOutput(t, func() { cmdProjectsConsolidate(cfg) })

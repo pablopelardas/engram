@@ -27,7 +27,7 @@ func seedCompareFixture(t *testing.T, s *store.Store) (idA, idB int64) {
 	}
 	a, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-compare",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "JWT auth decision",
 		Content:   "We use JWT for auth",
 		Project:   "engram",
@@ -38,7 +38,7 @@ func seedCompareFixture(t *testing.T, s *store.Store) (idA, idB int64) {
 	}
 	b, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-compare",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Session auth decision",
 		Content:   "We use sessions for auth",
 		Project:   "engram",

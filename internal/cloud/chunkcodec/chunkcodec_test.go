@@ -125,7 +125,7 @@ func TestCanonicalizeForProjectCanonicalizesDependencySessionsInMixedChunk(t *te
 			{"id":"sess-dependency","project":"proj-b","directory":"/tmp/proj-b"}
 		],
 		"observations": [
-			{"sync_id":"obs-direct","session_id":"sess-dependency","type":"note","title":"direct","content":"kept","project":"proj-b","scope":"project"}
+			{"sync_id":"obs-direct","session_id":"sess-dependency","type":"decision","title":"direct","content":"kept","project":"proj-b","scope":"project"}
 		],
 		"mutations": [
 			{

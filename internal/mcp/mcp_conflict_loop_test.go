@@ -42,7 +42,7 @@ func TestConflictLoop_SaveJudgeSearch(t *testing.T) {
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
 			"title":   "We use sessions for authentication middleware",
 			"content": "Session-based auth in the middleware layer keeps state server-side",
-			"type":    "architecture",
+			"type":    "decision",
 		}},
 	})
 	if err != nil {
@@ -67,7 +67,7 @@ func TestConflictLoop_SaveJudgeSearch(t *testing.T) {
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
 			"title":   "Switched from sessions to JWT authentication",
 			"content": "JWT tokens replace session-based auth for better scalability across services",
-			"type":    "architecture",
+			"type":    "decision",
 		}},
 	})
 	if err != nil {
@@ -190,7 +190,7 @@ func TestConflictLoop_MultiActor(t *testing.T) {
 
 	obsAID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-multi-actor",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth architecture uses sessions",
 		Content:   "Session-based auth is the primary approach",
 		Project:   "engram",
@@ -201,7 +201,7 @@ func TestConflictLoop_MultiActor(t *testing.T) {
 	}
 	obsBID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-multi-actor",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth architecture migrated to JWT",
 		Content:   "JWT-based auth replaces session auth",
 		Project:   "engram",
@@ -535,7 +535,7 @@ func TestConflictLoop_BackwardsCompat(t *testing.T) {
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
 			"title":   "Cache invalidation using event streaming",
 			"content": "We use event streaming to invalidate cache entries across nodes",
-			"type":    "architecture",
+			"type":    "decision",
 		}},
 	})
 	if err != nil {
@@ -546,7 +546,7 @@ func TestConflictLoop_BackwardsCompat(t *testing.T) {
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
 			"title":   "Cache invalidation via event streaming approach",
 			"content": "Event-driven cache invalidation across distributed nodes using streams",
-			"type":    "architecture",
+			"type":    "decision",
 		}},
 	})
 	if err != nil {

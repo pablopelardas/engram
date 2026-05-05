@@ -15,6 +15,9 @@ templ NavTabs(activeTab string, isAdmin bool) {
 	<div role="tablist">
 		@navTab("/dashboard/", "Dashboard", "dashboard", activeTab)
 		@navTab("/dashboard/browser", "Browser", "browser", activeTab)
+		@navTab("/dashboard/views/runbooks", "Runbooks", "runbooks", activeTab)
+		@navTab("/dashboard/views/known-issues", "Known Issues", "known-issues", activeTab)
+		@navTab("/dashboard/views/decisions", "Decisions", "decisions", activeTab)
 		@navTab("/dashboard/projects", "Projects", "projects", activeTab)
 		@navTab("/dashboard/contributors", "Contributors", "contributors", activeTab)
 		if isAdmin {

@@ -31,7 +31,7 @@ func TestGetContributorDetailReturnsScopedData(t *testing.T) {
 			createdAt: bobTime,
 			parsed: parseMustChunk(t, []byte(`{
 				"sessions":[{"id":"sess-bob-1","project":"proj-bob","started_at":"2026-04-23T09:00:00Z"}],
-				"observations":[{"sync_id":"obs-bob-1","session_id":"sess-bob-1","project":"proj-bob","type":"note","title":"Bob obs","created_at":"2026-04-23T09:10:00Z"}],
+				"observations":[{"sync_id":"obs-bob-1","session_id":"sess-bob-1","project":"proj-bob","type":"decision","title":"Bob obs","created_at":"2026-04-23T09:10:00Z"}],
 				"prompts":[{"sync_id":"prompt-bob-1","session_id":"sess-bob-1","project":"proj-bob","content":"Bob prompt","created_at":"2026-04-23T09:20:00Z"}]
 			}`)),
 		},
@@ -232,7 +232,7 @@ func TestCloudstoreSystemHealthAggregates(t *testing.T) {
 				"sessions":[{"id":"s-1","project":"proj-1","started_at":"2026-04-23T08:00:00Z"}],
 				"observations":[
 					{"sync_id":"o-1","session_id":"s-1","project":"proj-1","type":"decision","title":"O1","created_at":"2026-04-23T08:10:00Z"},
-					{"sync_id":"o-2","session_id":"s-1","project":"proj-1","type":"note","title":"O2","created_at":"2026-04-23T08:11:00Z"}
+					{"sync_id":"o-2","session_id":"s-1","project":"proj-1","type":"decision","title":"O2","created_at":"2026-04-23T08:11:00Z"}
 				],
 				"prompts":[{"sync_id":"p-1","session_id":"s-1","project":"proj-1","content":"P1","created_at":"2026-04-23T08:20:00Z"}]
 			}`)),
@@ -247,7 +247,7 @@ func TestCloudstoreSystemHealthAggregates(t *testing.T) {
 				],
 				"observations":[
 					{"sync_id":"o-3","session_id":"s-2","project":"proj-2","type":"decision","title":"O3","created_at":"2026-04-23T09:10:00Z"},
-					{"sync_id":"o-4","session_id":"s-2","project":"proj-2","type":"note","title":"O4","created_at":"2026-04-23T09:11:00Z"},
+					{"sync_id":"o-4","session_id":"s-2","project":"proj-2","type":"decision","title":"O4","created_at":"2026-04-23T09:11:00Z"},
 					{"sync_id":"o-5","session_id":"s-3","project":"proj-2","type":"bugfix","title":"O5","created_at":"2026-04-23T09:40:00Z"},
 					{"sync_id":"o-6","session_id":"s-3","project":"proj-2","type":"bugfix","title":"O6","created_at":"2026-04-23T09:41:00Z"},
 					{"sync_id":"o-7","session_id":"s-3","project":"proj-2","type":"bugfix","title":"O7","created_at":"2026-04-23T09:42:00Z"},
@@ -1539,7 +1539,7 @@ func TestObservationDetailNotFoundReturnsObservationNotFoundError(t *testing.T) 
 			createdAt: time.Date(2026, 4, 23, 10, 0, 0, 0, time.UTC),
 			parsed: parseMustChunk(t, []byte(`{
 				"sessions":[{"id":"sess-exists","project":"proj-valid","started_at":"2026-04-23T08:00:00Z"}],
-				"observations":[{"sync_id":"obs-exists","session_id":"sess-exists","project":"proj-valid","type":"note","title":"Exists","created_at":"2026-04-23T08:10:00Z"}]
+				"observations":[{"sync_id":"obs-exists","session_id":"sess-exists","project":"proj-valid","type":"decision","title":"Exists","created_at":"2026-04-23T08:10:00Z"}]
 			}`)),
 		},
 	}

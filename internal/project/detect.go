@@ -71,6 +71,10 @@ type DetectionResult struct {
 	Error error
 	// AvailableProjects is populated only when Error==ErrAmbiguousProject.
 	AvailableProjects []string
+	// OwnerTeam comes from .intuit-engram/config.json owner_team field.
+	OwnerTeam string
+	// System comes from .intuit-engram/config.json system field.
+	System string
 }
 
 // DetectProjectFull resolves the project for dir using a 5-case algorithm:
@@ -173,6 +177,8 @@ basename:
 
 type configFile struct {
 	ProjectName string `json:"project_name"`
+	OwnerTeam   string `json:"owner_team"`
+	System      string `json:"system"`
 }
 
 func detectFromConfig(dir string) (DetectionResult, bool) {
@@ -222,7 +228,7 @@ func readConfigAt(projectDir string) (DetectionResult, bool) {
 	if err != nil {
 		return invalidConfigResult(projectDir, err), true
 	}
-	return DetectionResult{Project: projectName, Source: SourceConfig, Path: projectDir}, true
+	return DetectionResult{Project: projectName, Source: SourceConfig, Path: projectDir, OwnerTeam: cfg.OwnerTeam, System: cfg.System}, true
 }
 
 func invalidConfigResult(path string, err error) DetectionResult {

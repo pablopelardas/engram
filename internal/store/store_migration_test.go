@@ -100,7 +100,7 @@ func migrationFixtureRows() []legacyObsRow {
 		{syncID: "obs-legacy-002", obsType: "bugfix", title: "Fixed tokenizer", content: "Normalized tokenizer panic on edge case", project: "engram", scope: "project"},
 		{syncID: "obs-legacy-003", obsType: "architecture", title: "Hexagonal arch agreed", content: "We follow hexagonal architecture", project: "engram", scope: "project"},
 		{syncID: "obs-legacy-004", obsType: "pattern", title: "Container-presentational pattern", content: "Use container components for state", project: "engram", scope: "project"},
-		{syncID: "obs-legacy-005", obsType: "policy", title: "No secrets in commits", content: "Never commit .env or credentials", project: "engram", scope: "project"},
+		{syncID: "obs-legacy-005", obsType: "decision", title: "No secrets in commits", content: "Never commit .env or credentials", project: "engram", scope: "project"},
 	}
 }
 

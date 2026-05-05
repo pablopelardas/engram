@@ -258,7 +258,7 @@ func TestQueuedHandleSavePersistsMemory(t *testing.T) {
 	res, err := h(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Queued save architecture",
 		"content": "MCP writes are serialized through an explicit queue",
-		"type":    "architecture",
+		"type":    "decision",
 	}}})
 	if err != nil {
 		t.Fatalf("queued save handler error: %v", err)

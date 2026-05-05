@@ -888,7 +888,7 @@ func cmdTUI(cfg store.Config) {
 
 func cmdSearch(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "usage: %s search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]\n", product.Name)
+		fmt.Fprintf(os.Stderr, "usage: %s search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--status STATUS] [--tags TAGS] [--severity SEVERITY] [--audience AUDIENCE] [--limit N]\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -918,6 +918,26 @@ func cmdSearch(cfg store.Config) {
 		case "--scope":
 			if i+1 < len(os.Args) {
 				opts.Scope = os.Args[i+1]
+				i++
+			}
+		case "--status":
+			if i+1 < len(os.Args) {
+				opts.Status = os.Args[i+1]
+				i++
+			}
+		case "--tags":
+			if i+1 < len(os.Args) {
+				opts.Tags = os.Args[i+1]
+				i++
+			}
+		case "--severity":
+			if i+1 < len(os.Args) {
+				opts.Severity = os.Args[i+1]
+				i++
+			}
+		case "--audience":
+			if i+1 < len(os.Args) {
+				opts.Audience = os.Args[i+1]
 				i++
 			}
 		default:
@@ -964,16 +984,22 @@ func cmdSearch(cfg store.Config) {
 
 func cmdSave(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "usage: %s save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY]\n", product.Name)
+		fmt.Fprintf(os.Stderr, "usage: %s save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY] [--status STATUS] [--tags TAGS] [--severity SEVERITY] [--audience AUDIENCE] [--owner-team OWNER_TEAM] [--system SYSTEM]\n", product.Name)
 		exitFunc(1)
 	}
 
 	title := os.Args[2]
 	content := os.Args[3]
 	typ := "manual"
-	project := ""
+	projectName := ""
 	scope := "project"
 	topicKey := ""
+	status := ""
+	tags := ""
+	severity := ""
+	audience := ""
+	ownerTeam := ""
+	system := ""
 
 	for i := 4; i < len(os.Args); i++ {
 		switch os.Args[i] {
@@ -984,7 +1010,7 @@ func cmdSave(cfg store.Config) {
 			}
 		case "--project":
 			if i+1 < len(os.Args) {
-				project = os.Args[i+1]
+				projectName = os.Args[i+1]
 				i++
 			}
 		case "--scope":
@@ -997,7 +1023,64 @@ func cmdSave(cfg store.Config) {
 				topicKey = os.Args[i+1]
 				i++
 			}
+		case "--status":
+			if i+1 < len(os.Args) {
+				status = os.Args[i+1]
+				i++
+			}
+		case "--tags":
+			if i+1 < len(os.Args) {
+				tags = os.Args[i+1]
+				i++
+			}
+		case "--severity":
+			if i+1 < len(os.Args) {
+				severity = os.Args[i+1]
+				i++
+			}
+		case "--audience":
+			if i+1 < len(os.Args) {
+				audience = os.Args[i+1]
+				i++
+			}
+		case "--owner-team":
+			if i+1 < len(os.Args) {
+				ownerTeam = os.Args[i+1]
+				i++
+			}
+		case "--system":
+			if i+1 < len(os.Args) {
+				system = os.Args[i+1]
+				i++
+			}
 		}
+	}
+
+	// Validate type against closed taxonomy
+	if typ != "" && typ != "manual" && !store.IsAllowedType(typ) {
+		fmt.Fprintf(os.Stderr, "error: invalid type %q: must be one of %v\n", typ, store.AllowedTypes)
+		exitFunc(1)
+	}
+
+	// Detect project and load repo config for owner_team/system
+	cwd, err := os.Getwd()
+	if err != nil {
+		fatal(err)
+	}
+	detRes := project.DetectProjectFull(cwd)
+	if projectName == "" {
+		if detRes.Project != "" {
+			projectName = detRes.Project
+		} else if detected := detectProject(cwd); detected != "" {
+			projectName = detected
+		}
+	}
+	// Fall back to project config for owner_team/system if not explicitly provided
+	if ownerTeam == "" {
+		ownerTeam = detRes.OwnerTeam
+	}
+	if system == "" {
+		system = detRes.System
 	}
 
 	s, err := storeNew(cfg)
@@ -1007,24 +1090,27 @@ func cmdSave(cfg store.Config) {
 	defer s.Close()
 
 	sessionID := "manual-save"
-	if project != "" {
-		sessionID = "manual-save-" + project
+	if projectName != "" {
+		sessionID = "manual-save-" + projectName
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
+	if err := s.CreateSession(sessionID, projectName, cwd); err != nil {
 		fatal(err)
 	}
-	if err := s.CreateSession(sessionID, project, cwd); err != nil {
-		fatal(err)
-	}
+
 	id, err := storeAddObservation(s, store.AddObservationParams{
 		SessionID: sessionID,
 		Type:      typ,
 		Title:     title,
 		Content:   content,
-		Project:   project,
+		Project:   projectName,
 		Scope:     scope,
 		TopicKey:  topicKey,
+		Status:    status,
+		Tags:      tags,
+		Severity:  severity,
+		Audience:  audience,
+		OwnerTeam: ownerTeam,
+		System:    system,
 	})
 	if err != nil {
 		fatal(err)

@@ -263,13 +263,25 @@ func registerTools(srv *server.MCPServer, s *store.Store, cfg MCPConfig, allowli
 					mcp.Description("Search query — natural language or keywords"),
 				),
 				mcp.WithString("type",
-					mcp.Description("Filter by type: tool_use, file_change, command, file_read, search, manual, decision, architecture, bugfix, pattern"),
+					mcp.Description("Filter by type: decision, bugfix, pattern, config, discovery, runbook, known_issue, manual"),
 				),
 				mcp.WithString("project",
 					mcp.Description("Filter by project name"),
 				),
 				mcp.WithString("scope",
 					mcp.Description("Filter by scope: project (default) or personal"),
+				),
+				mcp.WithString("status",
+					mcp.Description("Filter by status: active, superseded, deprecated, resolved"),
+				),
+				mcp.WithString("tags",
+					mcp.Description("Filter by tags (comma-separated, partial match)"),
+				),
+				mcp.WithString("severity",
+					mcp.Description("Filter by severity: low, medium, high, critical"),
+				),
+				mcp.WithString("audience",
+					mcp.Description("Filter by audience: devs, soporte, devops"),
 				),
 				mcp.WithNumber("limit",
 					mcp.Description("Max results (default: 10, max: 20)"),
@@ -323,7 +335,7 @@ Examples:
 					mcp.Description("Structured content using **What**, **Why**, **Where**, **Learned** format"),
 				),
 				mcp.WithString("type",
-					mcp.Description("Category: decision, architecture, bugfix, pattern, config, discovery, learning (default: manual)"),
+					mcp.Description("Category: decision, bugfix, pattern, config, discovery, runbook, known_issue (default: manual)"),
 				),
 				mcp.WithString("session_id",
 					mcp.Description("Session ID to associate with (default: manual-save-{project})"),
@@ -333,6 +345,18 @@ Examples:
 				),
 				mcp.WithString("topic_key",
 					mcp.Description("Optional topic identifier for upserts (e.g. architecture/auth-model). Reuses and updates the latest observation in same project+scope."),
+				),
+				mcp.WithString("status",
+					mcp.Description("Status: active, superseded, deprecated, resolved (default: active)"),
+				),
+				mcp.WithString("tags",
+					mcp.Description("Comma-separated tags for this observation"),
+				),
+				mcp.WithString("severity",
+					mcp.Description("Severity: low, medium, high, critical"),
+				),
+				mcp.WithString("audience",
+					mcp.Description("Audience: devs, soporte, devops"),
 				),
 				mcp.WithString("project",
 					mcp.Description("Optional recovery target only after ambiguous_project. Ignored unless project_choice_reason is user_selected_after_ambiguous_project."),
@@ -369,15 +393,27 @@ Examples:
 				mcp.WithString("content",
 					mcp.Description("New content"),
 				),
-				mcp.WithString("type",
-					mcp.Description("New type/category"),
-				),
-				mcp.WithString("scope",
-					mcp.Description("New scope: project or personal"),
-				),
-				mcp.WithString("topic_key",
-					mcp.Description("New topic key (normalized internally)"),
-				),
+			mcp.WithString("type",
+				mcp.Description("New type/category: decision, bugfix, pattern, config, discovery, runbook, known_issue"),
+			),
+			mcp.WithString("scope",
+				mcp.Description("New scope: project or personal"),
+			),
+			mcp.WithString("topic_key",
+				mcp.Description("New topic key (normalized internally)"),
+			),
+			mcp.WithString("status",
+				mcp.Description("New status: active, superseded, deprecated, resolved"),
+			),
+			mcp.WithString("tags",
+				mcp.Description("New comma-separated tags"),
+			),
+			mcp.WithString("severity",
+				mcp.Description("New severity: low, medium, high, critical"),
+			),
+			mcp.WithString("audience",
+				mcp.Description("New audience: devs, soporte, devops"),
+			),
 			),
 			queuedWriteHandler(writeQueue, handleUpdate(s)),
 		)
@@ -880,6 +916,10 @@ func handleSearch(s *store.Store, cfg MCPConfig, activity *SessionActivity) serv
 		typ, _ := req.GetArguments()["type"].(string)
 		projectOverride, _ := req.GetArguments()["project"].(string)
 		scope, _ := req.GetArguments()["scope"].(string)
+		status, _ := req.GetArguments()["status"].(string)
+		tags, _ := req.GetArguments()["tags"].(string)
+		severity, _ := req.GetArguments()["severity"].(string)
+		audience, _ := req.GetArguments()["audience"].(string)
 		limit := intArg(req, "limit", 10)
 
 		// Resolve project: validate override or auto-detect (REQ-310, REQ-311)
@@ -902,10 +942,14 @@ func handleSearch(s *store.Store, cfg MCPConfig, activity *SessionActivity) serv
 		activity.RecordToolCall(sessionID)
 
 		results, err := s.Search(query, store.SearchOptions{
-			Type:    typ,
-			Project: project,
-			Scope:   scope,
-			Limit:   limit,
+			Type:     typ,
+			Project:  project,
+			Scope:    scope,
+			Status:   status,
+			Tags:     tags,
+			Severity: severity,
+			Audience: audience,
+			Limit:    limit,
 		})
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Search error: %s. Try simpler keywords.", err)), nil
@@ -1017,6 +1061,12 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 		sessionID, _ := req.GetArguments()["session_id"].(string)
 		scope, _ := req.GetArguments()["scope"].(string)
 		topicKey, _ := req.GetArguments()["topic_key"].(string)
+		status, _ := req.GetArguments()["status"].(string)
+		tags, _ := req.GetArguments()["tags"].(string)
+		severity, _ := req.GetArguments()["severity"].(string)
+		audience, _ := req.GetArguments()["audience"].(string)
+		ownerTeam, _ := req.GetArguments()["owner_team"].(string)
+		system, _ := req.GetArguments()["system"].(string)
 		projectChoice, _ := req.GetArguments()["project"].(string)
 		projectChoiceReason, _ := req.GetArguments()["project_choice_reason"].(string)
 		capturePrompt := boolArg(req, "capture_prompt", true)
@@ -1067,6 +1117,19 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 
 		truncated := len(content) > s.MaxObservationLength()
 
+		// Validate type against closed taxonomy
+		if typ != "" && typ != "manual" && !store.IsAllowedType(typ) {
+			return mcp.NewToolResultError(fmt.Sprintf("Invalid type %q: must be one of %v", typ, store.AllowedTypes)), nil
+		}
+
+		// Fall back to project config for owner_team/system if not explicitly provided
+		if ownerTeam == "" {
+			ownerTeam = detRes.OwnerTeam
+		}
+		if system == "" {
+			system = detRes.System
+		}
+
 		savedID, err := s.AddObservation(store.AddObservationParams{
 			SessionID: sessionID,
 			Type:      typ,
@@ -1075,6 +1138,12 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 			Project:   project,
 			Scope:     scope,
 			TopicKey:  topicKey,
+			Status:    status,
+			Tags:      tags,
+			Severity:  severity,
+			Audience:  audience,
+			OwnerTeam: ownerTeam,
+			System:    system,
 		})
 		if err != nil {
 			return mcp.NewToolResultError("Failed to save: " + err.Error()), nil
@@ -1216,9 +1285,32 @@ func handleUpdate(s *store.Store) server.ToolHandlerFunc {
 		if v, ok := req.GetArguments()["topic_key"].(string); ok {
 			update.TopicKey = &v
 		}
+		if v, ok := req.GetArguments()["status"].(string); ok {
+			update.Status = &v
+		}
+		if v, ok := req.GetArguments()["tags"].(string); ok {
+			update.Tags = &v
+		}
+		if v, ok := req.GetArguments()["severity"].(string); ok {
+			update.Severity = &v
+		}
+		if v, ok := req.GetArguments()["audience"].(string); ok {
+			update.Audience = &v
+		}
+		if v, ok := req.GetArguments()["owner_team"].(string); ok {
+			update.OwnerTeam = &v
+		}
+		if v, ok := req.GetArguments()["system"].(string); ok {
+			update.System = &v
+		}
 
-		if update.Title == nil && update.Content == nil && update.Type == nil && update.Project == nil && update.Scope == nil && update.TopicKey == nil {
+		if update.Title == nil && update.Content == nil && update.Type == nil && update.Project == nil && update.Scope == nil && update.TopicKey == nil && update.Status == nil && update.Tags == nil && update.Severity == nil && update.Audience == nil && update.OwnerTeam == nil && update.System == nil {
 			return mcp.NewToolResultError("provide at least one field to update"), nil
+		}
+
+		// Validate type against closed taxonomy if changing
+		if update.Type != nil && *update.Type != "" && !store.IsAllowedType(*update.Type) {
+			return mcp.NewToolResultError(fmt.Sprintf("Invalid type %q: must be one of %v", *update.Type, store.AllowedTypes)), nil
 		}
 
 		var contentLen int

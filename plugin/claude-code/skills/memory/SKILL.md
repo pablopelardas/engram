@@ -57,11 +57,32 @@ Call `mem_save` IMMEDIATELY and WITHOUT BEING ASKED after any of these:
 ### Self-check — ask yourself after EVERY task:
 > "Did I or the user just make a decision, confirm a recommendation, express a preference, fix a bug, learn something non-obvious, or establish a convention? If yes, call mem_save NOW."
 
+### CONFIRMATION BEFORE SAVE (mandatory)
+
+Before calling `mem_save`, you MUST present a draft to the user and wait for confirmation:
+
+1. Draft the observation with the proposed fields:
+   - **type**: decision | bugfix | pattern | config | discovery | runbook | known_issue
+   - **title**: Verb + what — short, searchable
+   - **tags**: Comma-separated tags
+   - **severity**: low | medium | high | critical
+   - **status**: active | superseded | deprecated | resolved
+
+2. Show the draft to the user in your next reply
+
+3. Wait for explicit confirmation ("yes", "save it", "go ahead", etc.)
+
+4. ONLY after confirmation, call `mem_save` with the agreed fields
+
 Format for `mem_save`:
 - **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList", "Chose Zustand over Redux")
-- **type**: bugfix | decision | architecture | discovery | pattern | config | preference
+- **type**: decision | bugfix | pattern | config | discovery | runbook | known_issue
 - **scope**: `project` (default) | `personal`
 - **topic_key** (optional but recommended for evolving topics): stable key like `architecture/auth-model`
+- **status**: active | superseded | deprecated | resolved
+- **tags**: Comma-separated tags
+- **severity**: low | medium | high | critical
+- **audience**: devs | soporte | devops
 - **content**:
   **What**: One sentence — what was done
   **Why**: What motivated it (user request, bug, performance, etc.)

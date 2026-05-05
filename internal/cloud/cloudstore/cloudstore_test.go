@@ -676,7 +676,7 @@ func TestBuildDashboardReadModelSupportsParityQueries(t *testing.T) {
 			createdBy: "sofia@example.com",
 			parsed: parseMustChunk(t, []byte(`{
 				"sessions":[{"id":"s-2","project":"proj-a","started_at":"2026-04-22T08:00:00Z"}],
-				"observations":[{"sync_id":"obs-2","session_id":"s-2","project":"proj-a","type":"note","title":"Note B","created_at":"2026-04-22T08:10:00Z"}]
+				"observations":[{"sync_id":"obs-2","session_id":"s-2","project":"proj-a","type":"bugfix","title":"Bug B","created_at":"2026-04-22T08:10:00Z"}]
 			}`)),
 		},
 		{

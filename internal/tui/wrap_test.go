@@ -14,7 +14,7 @@ func TestViewObservationDetailWrapping(t *testing.T) {
 		Screen: ScreenObservationDetail,
 		SelectedObservation: &store.Observation{
 			ID:      1,
-			Type:    "note",
+			Type:    "decision",
 			Title:   "Test",
 			Content: "This is a very long line of text that should definitely be wrapped when the width is only forty characters wide.",
 		},

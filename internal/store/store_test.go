@@ -272,7 +272,7 @@ func TestTopicKeyUpsertUpdatesSameTopicWithoutCreatingNewRow(t *testing.T) {
 
 	firstID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth architecture",
 		Content:   "Use middleware for JWT validation.",
 		Project:   "engram",
@@ -285,7 +285,7 @@ func TestTopicKeyUpsertUpdatesSameTopicWithoutCreatingNewRow(t *testing.T) {
 
 	secondID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth architecture",
 		Content:   "Move auth to gateway + middleware chain.",
 		Project:   "engram",
@@ -324,7 +324,7 @@ func TestDifferentTopicsDoNotReplaceEachOther(t *testing.T) {
 
 	archID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth architecture",
 		Content:   "Architecture decision",
 		Project:   "engram",
@@ -581,7 +581,7 @@ func TestTopicKeyUpsertIsScopedByProjectAndScope(t *testing.T) {
 
 	baseID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth model",
 		Content:   "Initial architecture",
 		Project:   "engram",
@@ -594,7 +594,7 @@ func TestTopicKeyUpsertIsScopedByProjectAndScope(t *testing.T) {
 
 	personalID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth model",
 		Content:   "Personal take",
 		Project:   "engram",
@@ -607,7 +607,7 @@ func TestTopicKeyUpsertIsScopedByProjectAndScope(t *testing.T) {
 
 	otherProjectID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth model",
 		Content:   "Other project",
 		Project:   "another-project",
@@ -685,10 +685,10 @@ func TestExportProjectScopesRowsWithoutGlobalDumpFiltering(t *testing.T) {
 	if err := s.CreateSession("sess-b", "proj-b", "/tmp/proj-b"); err != nil {
 		t.Fatalf("create session proj-b: %v", err)
 	}
-	if _, err := s.AddObservation(AddObservationParams{SessionID: "sess-a", Type: "note", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
+	if _, err := s.AddObservation(AddObservationParams{SessionID: "sess-a", Type: "decision", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
 		t.Fatalf("add obs proj-a: %v", err)
 	}
-	if _, err := s.AddObservation(AddObservationParams{SessionID: "sess-b", Type: "note", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
+	if _, err := s.AddObservation(AddObservationParams{SessionID: "sess-b", Type: "decision", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
 		t.Fatalf("add obs proj-b: %v", err)
 	}
 	if _, err := s.AddPrompt(AddPromptParams{SessionID: "sess-a", Content: "prompt-a", Project: "proj-a"}); err != nil {
@@ -722,7 +722,7 @@ func TestExportProjectPreservesSessionReferentialClosure(t *testing.T) {
 
 	if _, err := s.AddObservation(AddObservationParams{
 		SessionID: "sess-owned-by-proj-b",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "cross-project obs",
 		Content:   "observation references proj-b session",
 		Project:   "proj-a",
@@ -781,7 +781,7 @@ func TestExportProjectDoesNotLeakRowsOwnedByOtherProjectsViaSessionMembership(t 
 
 	if _, err := s.AddObservation(AddObservationParams{
 		SessionID: "sess-proj-a",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "owned-by-proj-b",
 		Content:   "should not leak in proj-a export",
 		Project:   "proj-b",
@@ -800,7 +800,7 @@ func TestExportProjectDoesNotLeakRowsOwnedByOtherProjectsViaSessionMembership(t 
 
 	if _, err := s.AddObservation(AddObservationParams{
 		SessionID: "sess-proj-a",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "projectless observation",
 		Content:   "derive ownership from proj-a session",
 		Scope:     "project",
@@ -1480,7 +1480,7 @@ func TestAckSyncMutationSeqsRefreshesProjectScopedState(t *testing.T) {
 	}
 	if _, err := s.AddObservation(AddObservationParams{
 		SessionID: "sess-proj",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "proj scoped",
 		Content:   "pending",
 		Project:   "proj-a",
@@ -1553,7 +1553,7 @@ func TestAckSyncMutationsRefreshesProjectStateAndClearsDegradedMetadata(t *testi
 	}
 	if _, err := s.AddObservation(AddObservationParams{
 		SessionID: "sess-proj",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "proj scoped",
 		Content:   "pending",
 		Project:   "proj-a",
@@ -2416,7 +2416,7 @@ func TestApplyPulledChunkIsAtomicAndRetrySafe(t *testing.T) {
 			Entity:    SyncEntityObservation,
 			EntityKey: "chunk-obs-bad",
 			Op:        SyncOpUpsert,
-			Payload:   `{"sync_id":"chunk-obs-bad","session_id":"missing-session","type":"note","title":"bad","content":"fails fk","project":"engram","scope":"project"}`,
+			Payload:   `{"sync_id":"chunk-obs-bad","session_id":"missing-session","type":"decision","title":"bad","content":"fails fk","project":"engram","scope":"project"}`,
 		},
 	}
 
@@ -2721,7 +2721,7 @@ func TestEndSessionAndTimelineDefaults(t *testing.T) {
 
 	firstID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s-end",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "first",
 		Content:   "first note",
 		Project:   "engram",
@@ -2731,7 +2731,7 @@ func TestEndSessionAndTimelineDefaults(t *testing.T) {
 	}
 	_, err = s.AddObservation(AddObservationParams{
 		SessionID: "s-end",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "second",
 		Content:   "second note",
 		Project:   "engram",
@@ -2781,7 +2781,7 @@ func TestInferTopicFamilyCoverage(t *testing.T) {
 		{name: "type pattern", typ: "pattern", want: "pattern"},
 		{name: "type config", typ: "config", want: "config"},
 		{name: "type discovery", typ: "discovery", want: "discovery"},
-		{name: "type learning", typ: "learning", want: "learning"},
+		{name: "type learning", typ: "discovery", want: "discovery"},
 		{name: "type session summary", typ: "session_summary", want: "session"},
 		{name: "text bug", title: "", content: "this caused a crash regression", want: "bug"},
 		{name: "text architecture", title: "", content: "new boundary design", want: "architecture"},
@@ -2789,7 +2789,7 @@ func TestInferTopicFamilyCoverage(t *testing.T) {
 		{name: "text pattern", title: "", content: "naming convention for handlers", want: "pattern"},
 		{name: "text config", title: "", content: "docker env setup", want: "config"},
 		{name: "text discovery", title: "", content: "root cause found", want: "discovery"},
-		{name: "text learning", title: "", content: "key learning from this issue", want: "learning"},
+		{name: "text learning", title: "", content: "key learning from this issue", want: "discovery"},
 		{name: "fallback type", typ: "Custom Type", want: "custom-type"},
 		{name: "default topic", typ: "manual", title: "", content: "", want: "topic"},
 	}
@@ -2814,7 +2814,7 @@ func TestStoreAdditionalQueryAndMutationBranches(t *testing.T) {
 	longContent := strings.Repeat("x", s.cfg.MaxObservationLength+100)
 	obsID, err := s.AddObservation(AddObservationParams{
 		SessionID: "s-q",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "Private <private>secret</private> title",
 		Content:   longContent + " <private>token</private>",
 		Project:   "engram",
@@ -3337,7 +3337,13 @@ func TestMigrationInternalErrorAndNoopBranches(t *testing.T) {
 					last_seen_at TEXT,
 					created_at TEXT,
 					updated_at TEXT,
-					deleted_at TEXT
+					deleted_at TEXT,
+					owner_team TEXT,
+					system TEXT,
+					status TEXT,
+					tags TEXT,
+					severity TEXT,
+					audience TEXT
 				);
 				INSERT INTO observations (id, session_id, type, title, content, project, created_at, updated_at)
 				VALUES (1, 's1', 'bugfix', 'legacy', 'legacy row', 'engram', datetime('now'), datetime('now'));
@@ -3493,10 +3499,10 @@ func TestHookFallbacksAndAdditionalBranches(t *testing.T) {
 		if err := s.CreateSession("s-q", "proj-b", "/tmp/proj-b"); err != nil {
 			t.Fatalf("create session proj-b: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-p", Type: "note", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-p", Type: "decision", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
 			t.Fatalf("add observation proj-a: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-q", Type: "note", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-q", Type: "decision", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
 			t.Fatalf("add observation proj-b: %v", err)
 		}
 
@@ -3555,15 +3561,15 @@ func TestHookFallbacksAndAdditionalBranches(t *testing.T) {
 			t.Fatalf("create session: %v", err)
 		}
 
-		firstID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "note", Title: "1", Content: "one", Project: "engram"})
+		firstID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "decision", Title: "1", Content: "one", Project: "engram"})
 		if err != nil {
 			t.Fatalf("add first observation: %v", err)
 		}
-		middleID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "note", Title: "2", Content: "two", Project: "engram"})
+		middleID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "decision", Title: "2", Content: "two", Project: "engram"})
 		if err != nil {
 			t.Fatalf("add middle observation: %v", err)
 		}
-		lastID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "note", Title: "3", Content: "three", Project: "engram"})
+		lastID, err := s.AddObservation(AddObservationParams{SessionID: "s-tl", Type: "decision", Title: "3", Content: "three", Project: "engram"})
 		if err != nil {
 			t.Fatalf("add last observation: %v", err)
 		}
@@ -3772,7 +3778,7 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 			t.Fatalf("create session: %v", err)
 		}
 
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "top", Content: "x", Project: "engram", TopicKey: "x"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "top", Content: "x", Project: "engram", TopicKey: "x"}); err != nil {
 			t.Fatalf("seed topic observation: %v", err)
 		}
 		origExec := s.hooks.exec
@@ -3782,12 +3788,12 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 			}
 			return origExec(db, query, args...)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "top", Content: "x", Project: "engram", TopicKey: "x"}); err == nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "top", Content: "x", Project: "engram", TopicKey: "x"}); err == nil {
 			t.Fatalf("expected topic upsert exec error")
 		}
 
 		s.hooks = defaultStoreHooks()
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "dup", Content: "dup content", Project: "engram"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "dup", Content: "dup content", Project: "engram"}); err != nil {
 			t.Fatalf("seed dedupe observation: %v", err)
 		}
 		origExec = s.hooks.exec
@@ -3797,17 +3803,17 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 			}
 			return origExec(db, query, args...)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "dup", Content: "dup content", Project: "engram"}); err == nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "dup", Content: "dup content", Project: "engram"}); err == nil {
 			t.Fatalf("expected dedupe exec error")
 		}
 
 		if err := s.Close(); err != nil {
 			t.Fatalf("close store: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "x", Content: "y", Project: "engram", TopicKey: "t"}); err == nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "x", Content: "y", Project: "engram", TopicKey: "t"}); err == nil {
 			t.Fatalf("expected topic query error on closed db")
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "note", Title: "x", Content: "y", Project: "engram"}); err == nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-e", Type: "decision", Title: "x", Content: "y", Project: "engram"}); err == nil {
 			t.Fatalf("expected dedupe query error on closed db")
 		}
 		if _, err := s.AddPrompt(AddPromptParams{SessionID: "s-e", Content: "x"}); err == nil {
@@ -3820,7 +3826,7 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 		if err := s.CreateSession("s-u", "engram", "/tmp/engram"); err != nil {
 			t.Fatalf("create session: %v", err)
 		}
-		id, err := s.AddObservation(AddObservationParams{SessionID: "s-u", Type: "old", Title: "t", Content: "c", Project: "engram", TopicKey: "topic/key"})
+		id, err := s.AddObservation(AddObservationParams{SessionID: "s-u", Type: "decision", Title: "t", Content: "c", Project: "engram", TopicKey: "topic/key"})
 		if err != nil {
 			t.Fatalf("seed observation: %v", err)
 		}
@@ -3829,7 +3835,7 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 			t.Fatalf("expected update missing observation error")
 		}
 
-		newType := "new-type"
+		newType := "bugfix"
 		longContent := strings.Repeat("z", s.cfg.MaxObservationLength+50)
 		if _, err := s.UpdateObservation(id, UpdateObservationParams{Type: &newType, Content: &longContent}); err != nil {
 			t.Fatalf("update with type+truncation: %v", err)
@@ -3872,7 +3878,7 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 		if err := s.CreateSession("s-iter", "engram", "/tmp/engram"); err != nil {
 			t.Fatalf("create session: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-iter", Type: "note", Title: "one", Content: "one", Project: "engram"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-iter", Type: "decision", Title: "one", Content: "one", Project: "engram"}); err != nil {
 			t.Fatalf("add observation: %v", err)
 		}
 		if _, err := s.AddPrompt(AddPromptParams{SessionID: "s-iter", Content: "prompt", Project: "engram"}); err != nil {
@@ -4110,7 +4116,7 @@ func TestStoreUncoveredBranchesPushToHundred(t *testing.T) {
 		if err := s.CreateSession("s-c", "engram", "/tmp/engram"); err != nil {
 			t.Fatalf("create session: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-c", Type: "note", Title: "n", Content: "n", Project: "engram"}); err != nil {
+		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-c", Type: "decision", Title: "n", Content: "n", Project: "engram"}); err != nil {
 			t.Fatalf("add obs: %v", err)
 		}
 
@@ -7305,8 +7311,143 @@ func withinDays(t *testing.T, label, value string, expected time.Time, days int)
 	}
 }
 
+// TestIsAllowedType verifies the closed taxonomy validation.
+func TestIsAllowedType(t *testing.T) {
+	valid := []string{"decision", "bugfix", "pattern", "config", "discovery", "runbook", "known_issue", "manual", "passive", "session_summary"}
+	for _, v := range valid {
+		if !IsAllowedType(v) {
+			t.Errorf("IsAllowedType(%q): expected true, got false", v)
+		}
+	}
+	invalid := []string{"note", "architecture", "learning", "policy", "preference", "observation", "", "random"}
+	for _, v := range invalid {
+		if IsAllowedType(v) {
+			t.Errorf("IsAllowedType(%q): expected false, got true", v)
+		}
+	}
+}
+
+// TestAddObservation_RejectsInvalidType verifies that AddObservation rejects
+// types outside the closed taxonomy.
+func TestAddObservation_RejectsInvalidType(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.CreateSession("s-type", "proj", "/tmp"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	_, err := s.AddObservation(AddObservationParams{
+		SessionID: "s-type",
+		Type:      "note",
+		Title:     "t",
+		Content:   "c",
+		Project:   "proj",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid type, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid observation type") {
+		t.Fatalf("expected 'invalid observation type' error, got: %v", err)
+	}
+}
+
+// TestUpdateObservation_RejectsInvalidType verifies that UpdateObservation rejects
+// types outside the closed taxonomy.
+func TestUpdateObservation_RejectsInvalidType(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.CreateSession("s-utype", "proj", "/tmp"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	id, err := s.AddObservation(AddObservationParams{
+		SessionID: "s-utype",
+		Type:      "decision",
+		Title:     "t",
+		Content:   "c",
+		Project:   "proj",
+	})
+	if err != nil {
+		t.Fatalf("add observation: %v", err)
+	}
+	badType := "note"
+	_, err = s.UpdateObservation(id, UpdateObservationParams{Type: &badType})
+	if err == nil {
+		t.Fatal("expected error for invalid type update, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid observation type") {
+		t.Fatalf("expected 'invalid observation type' error, got: %v", err)
+	}
+}
+
+// TestAddObservation_MetadataFieldsRoundtrip verifies that owner_team, system,
+// status, tags, severity, and audience are persisted and retrievable.
+func TestAddObservation_MetadataFieldsRoundtrip(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.CreateSession("s-meta", "proj", "/tmp"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	id, err := s.AddObservation(AddObservationParams{
+		SessionID: "s-meta",
+		Type:      "decision",
+		Title:     "meta title",
+		Content:   "meta content",
+		Project:   "proj",
+		Scope:     "project",
+		OwnerTeam: "platform",
+		System:    "auth-service",
+		Status:    "active",
+		Tags:      "auth,jwt",
+		Severity:  "high",
+		Audience:  "team",
+	})
+	if err != nil {
+		t.Fatalf("add observation: %v", err)
+	}
+	obs, err := s.GetObservation(id)
+	if err != nil {
+		t.Fatalf("get observation: %v", err)
+	}
+	if obs.OwnerTeam == nil || *obs.OwnerTeam != "platform" {
+		t.Fatalf("owner_team: expected 'platform', got %v", obs.OwnerTeam)
+	}
+	if obs.System == nil || *obs.System != "auth-service" {
+		t.Fatalf("system: expected 'auth-service', got %v", obs.System)
+	}
+	if obs.Status == nil || *obs.Status != "active" {
+		t.Fatalf("status: expected 'active', got %v", obs.Status)
+	}
+	if obs.Tags == nil || *obs.Tags != "auth,jwt" {
+		t.Fatalf("tags: expected 'auth,jwt', got %v", obs.Tags)
+	}
+	if obs.Severity == nil || *obs.Severity != "high" {
+		t.Fatalf("severity: expected 'high', got %v", obs.Severity)
+	}
+	if obs.Audience == nil || *obs.Audience != "team" {
+		t.Fatalf("audience: expected 'team', got %v", obs.Audience)
+	}
+
+	// Update metadata fields
+	newTeam := "infra"
+	newSystem := "gateway"
+	newStatus := "deprecated"
+	updated, err := s.UpdateObservation(id, UpdateObservationParams{
+		OwnerTeam: &newTeam,
+		System:    &newSystem,
+		Status:    &newStatus,
+	})
+	if err != nil {
+		t.Fatalf("update observation: %v", err)
+	}
+	if updated.OwnerTeam == nil || *updated.OwnerTeam != "infra" {
+		t.Fatalf("updated owner_team: expected 'infra', got %v", updated.OwnerTeam)
+	}
+	if updated.System == nil || *updated.System != "gateway" {
+		t.Fatalf("updated system: expected 'gateway', got %v", updated.System)
+	}
+	if updated.Status == nil || *updated.Status != "deprecated" {
+		t.Fatalf("updated status: expected 'deprecated', got %v", updated.Status)
+	}
+}
+
 // TestAddObservation_DecayDefaults verifies that AddObservation populates
-// review_after for known types (decision, policy, preference) and leaves it
+// review_after for known types (decision) and leaves it
 // NULL for unknown/unlisted types. expires_at is NULL for all types Phase 1.
 func TestAddObservation_DecayDefaults(t *testing.T) {
 	s := newTestStore(t)
@@ -7322,12 +7463,13 @@ func TestAddObservation_DecayDefaults(t *testing.T) {
 		wantMonthsOffset int
 	}{
 		{"decision", false, 6},
-		{"policy", false, 12},
-		{"preference", false, 3},
-		{"observation", true, 0},
-		{"manual", true, 0},
 		{"bugfix", true, 0},
-		{"architecture", true, 0},
+		{"pattern", true, 0},
+		{"config", true, 0},
+		{"discovery", true, 0},
+		{"runbook", true, 0},
+		{"known_issue", true, 0},
+		{"manual", true, 0},
 		{"", true, 0},
 	}
 

@@ -177,10 +177,10 @@ func TestExportHonorsProjectQueryScope(t *testing.T) {
 	if err := st.CreateSession("sess-b", "proj-b", "/tmp/proj-b"); err != nil {
 		t.Fatalf("create session proj-b: %v", err)
 	}
-	if _, err := st.AddObservation(store.AddObservationParams{SessionID: "sess-a", Type: "note", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
+	if _, err := st.AddObservation(store.AddObservationParams{SessionID: "sess-a", Type: "decision", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
 		t.Fatalf("add obs proj-a: %v", err)
 	}
-	if _, err := st.AddObservation(store.AddObservationParams{SessionID: "sess-b", Type: "note", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
+	if _, err := st.AddObservation(store.AddObservationParams{SessionID: "sess-b", Type: "decision", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
 		t.Fatalf("add obs proj-b: %v", err)
 	}
 	if _, err := st.AddPrompt(store.AddPromptParams{SessionID: "sess-a", Content: "prompt-a", Project: "proj-a"}); err != nil {
@@ -444,7 +444,7 @@ func TestOnWriteCalledAfterSuccessfulWrites(t *testing.T) {
 	}
 
 	// Add observation → should trigger onWrite.
-	obsBody := `{"session_id":"s-test","type":"test","title":"Test","content":"test content"}`
+	obsBody := `{"session_id":"s-test","type":"decision","title":"Test","content":"test content"}`
 	obsReq := httptest.NewRequest(http.MethodPost, "/observations",
 		strings.NewReader(obsBody))
 	obsReq.Header.Set("Content-Type", "application/json")

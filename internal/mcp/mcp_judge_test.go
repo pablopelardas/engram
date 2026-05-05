@@ -23,7 +23,7 @@ func seedJudgeFixture(t *testing.T, s *store.Store) (judgmentID string, sourceSy
 	}
 	srcID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-judge",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Old auth using sessions",
 		Content:   "We used session-based auth",
 		Project:   "engram",
@@ -34,7 +34,7 @@ func seedJudgeFixture(t *testing.T, s *store.Store) (judgmentID string, sourceSy
 	}
 	tgtID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-judge",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "New auth using JWT",
 		Content:   "Switched to JWT-based auth",
 		Project:   "engram",

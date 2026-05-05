@@ -143,6 +143,11 @@ func Mount(mux *http.ServeMux, cfg MountConfig) {
 	// Audit log routes — admin-gated (REQ-408, REQ-409).
 	mux.HandleFunc("GET /dashboard/admin/audit-log", h.requireSession(h.handleAdminAuditLog))
 	mux.HandleFunc("GET /dashboard/admin/audit-log/list", h.requireSession(h.handleAdminAuditLogList))
+
+	// Curated view routes (P1)
+	mux.HandleFunc("GET /dashboard/views/runbooks", h.requireSession(h.handleViewRunbooks))
+	mux.HandleFunc("GET /dashboard/views/known-issues", h.requireSession(h.handleViewKnownIssues))
+	mux.HandleFunc("GET /dashboard/views/decisions", h.requireSession(h.handleViewDecisions))
 }
 
 func Handler() http.Handler {
@@ -1052,6 +1057,95 @@ func renderHTMLStatus(w http.ResponseWriter, status int, body string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = w.Write([]byte(body))
+}
+
+// ─── Curated View Handlers ───────────────────────────────────────────────────
+
+func (h *handlers) handleViewRunbooks(w http.ResponseWriter, r *http.Request) {
+	p := h.principalFromRequest(r)
+	project := strings.TrimSpace(r.URL.Query().Get("project"))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	reqPage, pageSize := parsePaginationRaw(r)
+	rows := make([]cloudstore.DashboardObservationRow, 0)
+	total := 0
+	if h.cfg.Store != nil {
+		var err error
+		rows, total, err = h.cfg.Store.ListRecentObservationsPaginated(project, query, "runbook", pageSize, (reqPage-1)*pageSize)
+		if err != nil {
+			h.renderStoreError(w, r, "browser", "Runbooks", err)
+			return
+		}
+	}
+	pg, needsRefetch := reclampPagination(reqPage, pageSize, total)
+	if needsRefetch && h.cfg.Store != nil {
+		if refetched, _, err := h.cfg.Store.ListRecentObservationsPaginated(project, query, "runbook", pageSize, pg.Offset()); err == nil {
+			rows = refetched
+		}
+	}
+	partial := ObservationsPartial(rows, pg)
+	if isHTMXRequest(r) {
+		renderComponent(w, r, partial)
+		return
+	}
+	renderComponent(w, r, Layout("Runbooks", p.DisplayName(), "browser", p.IsAdmin(), BrowserPage(nil, nil, project, query, "runbook")))
+}
+
+func (h *handlers) handleViewKnownIssues(w http.ResponseWriter, r *http.Request) {
+	p := h.principalFromRequest(r)
+	project := strings.TrimSpace(r.URL.Query().Get("project"))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	reqPage, pageSize := parsePaginationRaw(r)
+	rows := make([]cloudstore.DashboardObservationRow, 0)
+	total := 0
+	if h.cfg.Store != nil {
+		var err error
+		rows, total, err = h.cfg.Store.ListRecentObservationsPaginated(project, query, "known_issue", pageSize, (reqPage-1)*pageSize)
+		if err != nil {
+			h.renderStoreError(w, r, "browser", "Known Issues", err)
+			return
+		}
+	}
+	pg, needsRefetch := reclampPagination(reqPage, pageSize, total)
+	if needsRefetch && h.cfg.Store != nil {
+		if refetched, _, err := h.cfg.Store.ListRecentObservationsPaginated(project, query, "known_issue", pageSize, pg.Offset()); err == nil {
+			rows = refetched
+		}
+	}
+	partial := ObservationsPartial(rows, pg)
+	if isHTMXRequest(r) {
+		renderComponent(w, r, partial)
+		return
+	}
+	renderComponent(w, r, Layout("Known Issues", p.DisplayName(), "browser", p.IsAdmin(), BrowserPage(nil, nil, project, query, "known_issue")))
+}
+
+func (h *handlers) handleViewDecisions(w http.ResponseWriter, r *http.Request) {
+	p := h.principalFromRequest(r)
+	project := strings.TrimSpace(r.URL.Query().Get("project"))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	reqPage, pageSize := parsePaginationRaw(r)
+	rows := make([]cloudstore.DashboardObservationRow, 0)
+	total := 0
+	if h.cfg.Store != nil {
+		var err error
+		rows, total, err = h.cfg.Store.ListRecentObservationsPaginated(project, query, "decision", pageSize, (reqPage-1)*pageSize)
+		if err != nil {
+			h.renderStoreError(w, r, "browser", "Decisions", err)
+			return
+		}
+	}
+	pg, needsRefetch := reclampPagination(reqPage, pageSize, total)
+	if needsRefetch && h.cfg.Store != nil {
+		if refetched, _, err := h.cfg.Store.ListRecentObservationsPaginated(project, query, "decision", pageSize, pg.Offset()); err == nil {
+			rows = refetched
+		}
+	}
+	partial := ObservationsPartial(rows, pg)
+	if isHTMXRequest(r) {
+		renderComponent(w, r, partial)
+		return
+	}
+	renderComponent(w, r, Layout("Decisions", p.DisplayName(), "browser", p.IsAdmin(), BrowserPage(nil, nil, project, query, "decision")))
 }
 
 // ─── Audit Log Handlers ───────────────────────────────────────────────────────

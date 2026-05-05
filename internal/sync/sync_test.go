@@ -1731,7 +1731,7 @@ func TestCloudImportChunkApplyIsAtomicOnFailure(t *testing.T) {
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-bad",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-bad","session_id":"missing-session","type":"note","title":"bad","content":"fails fk","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-bad","session_id":"missing-session","type":"decision","title":"bad","content":"fails fk","project":"proj-a","scope":"project"}`,
 		},
 	}}
 	badPayload, err := json.Marshal(badChunk)
@@ -1776,7 +1776,7 @@ func TestCloudImportReordersChunksToEstablishSessionsBeforeDependents(t *testing
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-needs-session",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-needs-session","session_id":"sess-bootstrap","type":"note","title":"boot","content":"depends on session","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-needs-session","session_id":"sess-bootstrap","type":"decision","title":"boot","content":"depends on session","project":"proj-a","scope":"project"}`,
 		},
 	}}
 	obsPayload, err := json.Marshal(obsChunk)
@@ -1835,7 +1835,7 @@ func TestCloudImportReordersMutationsWithinChunkToAvoidFKFailures(t *testing.T) 
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-mixed",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-mixed","session_id":"sess-mixed","type":"note","title":"mixed","content":"chunk needs reorder","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-mixed","session_id":"sess-mixed","type":"decision","title":"mixed","content":"chunk needs reorder","project":"proj-a","scope":"project"}`,
 		},
 		{
 			Entity:    store.SyncEntityPrompt,
@@ -1898,7 +1898,7 @@ func TestCloudImportMixedChunkAppliesDirectArrayDependenciesBeforeMutations(t *t
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-direct-dep",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-direct-dep","session_id":"sess-direct","type":"note","title":"mixed","content":"depends on direct session","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-direct-dep","session_id":"sess-direct","type":"decision","title":"mixed","content":"depends on direct session","project":"proj-a","scope":"project"}`,
 		}},
 	}
 	chunkPayload, err := json.Marshal(mixedChunk)
@@ -1934,7 +1934,7 @@ func TestBuildImportMutationsSkipsClosureOnlyDirectSessionsWhenChunkHasExplicitM
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-needs-session",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-needs-session","session_id":"sess-needed","type":"note","title":"needed","content":"depends on direct session","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-needs-session","session_id":"sess-needed","type":"decision","title":"needed","content":"depends on direct session","project":"proj-a","scope":"project"}`,
 		}},
 	}
 
@@ -1969,7 +1969,7 @@ func TestBuildImportMutationsPreservesSessionsNeededByRetainedSynthesizedEntitie
 		Observations: []store.Observation{{
 			SyncID:    "obs-direct",
 			SessionID: "sess-direct",
-			Type:      "note",
+			Type:      "decision",
 			Title:     "direct",
 			Content:   "direct-array observation",
 			Project:   &project,
@@ -1979,7 +1979,7 @@ func TestBuildImportMutationsPreservesSessionsNeededByRetainedSynthesizedEntitie
 			Entity:    store.SyncEntityObservation,
 			EntityKey: "obs-explicit",
 			Op:        store.SyncOpUpsert,
-			Payload:   `{"sync_id":"obs-explicit","session_id":"sess-explicit","type":"note","title":"explicit","content":"keeps explicit path","project":"proj-a","scope":"project"}`,
+			Payload:   `{"sync_id":"obs-explicit","session_id":"sess-explicit","type":"decision","title":"explicit","content":"keeps explicit path","project":"proj-a","scope":"project"}`,
 		}},
 	}
 

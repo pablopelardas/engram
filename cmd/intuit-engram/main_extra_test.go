@@ -2290,7 +2290,7 @@ func TestCmdExportDefaultAndCmdImportErrors(t *testing.T) {
 	cfg := testConfig(t)
 	stubExitWithPanic(t)
 
-	mustSeedObservation(t, cfg, "s-exp-default", "proj", "note", "title", "content", "project")
+	mustSeedObservation(t, cfg, "s-exp-default", "proj", "decision", "title", "content", "project")
 
 	withArgs(t, "engram", "export")
 	stdout, stderr, recovered := captureOutputAndRecover(t, func() { cmdExport(cfg) })
@@ -2455,7 +2455,7 @@ func TestMainDispatchRemainingCommands(t *testing.T) {
 		t.Fatalf("DefaultConfig: %v", scErr)
 	}
 	seedCfg.DataDir = dataDir
-	focusID := mustSeedObservation(t, seedCfg, "s-main", "main-proj", "note", "focus", "focus content", "project")
+	focusID := mustSeedObservation(t, seedCfg, "s-main", "main-proj", "decision", "focus", "focus content", "project")
 
 	importFile := filepath.Join(t.TempDir(), "import.json")
 	if err := os.WriteFile(importFile, []byte(`{"version":"0.1.0","exported_at":"2026-01-01T00:00:00Z","sessions":[],"observations":[],"prompts":[]}`), 0644); err != nil {
@@ -3115,7 +3115,7 @@ func TestCmdSyncCloudImportKeepsPendingWhenLocalMutationsRemain(t *testing.T) {
 	}
 	if _, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "sess-pending",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "pending local mutation",
 		Content:   "still unacked",
 		Project:   "proj-a",
@@ -3196,7 +3196,7 @@ func TestCmdSyncCloudExportKeepsPendingWhenLocalMutationsRemain(t *testing.T) {
 	}
 	if _, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "sess-pending-export",
-		Type:      "note",
+		Type:      "decision",
 		Title:     "pending local mutation",
 		Content:   "still unacked",
 		Project:   "proj-a",
@@ -3560,7 +3560,7 @@ func TestCmdImportStoreImportFailure(t *testing.T) {
 		"version":"0.1.0",
 		"exported_at":"2026-01-01T00:00:00Z",
 		"sessions":[],
-		"observations":[{"id":1,"session_id":"missing-session","type":"note","title":"x","content":"y","scope":"project","revision_count":1,"duplicate_count":1,"created_at":"2026-01-01 00:00:00","updated_at":"2026-01-01 00:00:00"}],
+		"observations":[{"id":1,"session_id":"missing-session","type":"decision","title":"x","content":"y","scope":"project","revision_count":1,"duplicate_count":1,"created_at":"2026-01-01 00:00:00","updated_at":"2026-01-01 00:00:00"}],
 		"prompts":[]
 	}`
 	if err := os.WriteFile(badImport, []byte(badJSON), 0644); err != nil {
@@ -3627,7 +3627,7 @@ func TestCmdSetupHyphenArgFallsBackToInteractive(t *testing.T) {
 
 func TestCmdTimelineNoBeforeAfterSections(t *testing.T) {
 	cfg := testConfig(t)
-	focusID := mustSeedObservation(t, cfg, "solo-session", "solo", "note", "focus", "only content", "project")
+	focusID := mustSeedObservation(t, cfg, "solo-session", "solo", "decision", "focus", "only content", "project")
 
 	withArgs(t, "engram", "timeline", fmt.Sprintf("%d", focusID), "--before", "0", "--after", "0")
 	stdout, stderr, recovered := captureOutputAndRecover(t, func() { cmdTimeline(cfg) })
@@ -3683,7 +3683,7 @@ func TestCmdSyncImportEmptyAndMixedChunks(t *testing.T) {
 		exportCfg := testConfig(t)
 		importCfg := testConfig(t)
 
-		mustSeedObservation(t, exportCfg, "mix-1", "mix", "note", "one", "content-one", "project")
+		mustSeedObservation(t, exportCfg, "mix-1", "mix", "decision", "one", "content-one", "project")
 		withArgs(t, "engram", "sync", "--all")
 		_, _, _ = captureOutputAndRecover(t, func() { cmdSync(exportCfg) })
 
@@ -3691,7 +3691,7 @@ func TestCmdSyncImportEmptyAndMixedChunks(t *testing.T) {
 		_, _, _ = captureOutputAndRecover(t, func() { cmdSync(importCfg) })
 
 		time.Sleep(1100 * time.Millisecond)
-		mustSeedObservation(t, exportCfg, "mix-2", "mix", "note", "two", "content-two", "project")
+		mustSeedObservation(t, exportCfg, "mix-2", "mix", "decision", "two", "content-two", "project")
 		withArgs(t, "engram", "sync", "--all")
 		_, _, _ = captureOutputAndRecover(t, func() { cmdSync(exportCfg) })
 
@@ -3753,7 +3753,7 @@ func TestCommandErrorSeamsAndUncoveredBranches(t *testing.T) {
 		withArgs(t, "engram", "timeline", "1")
 		storeTimeline = func(*store.Store, int64, int, int) (*store.TimelineResult, error) {
 			return &store.TimelineResult{
-				Focus:        store.Observation{ID: 1, Type: "note", Title: "focus", Content: "content", CreatedAt: "2026-01-01"},
+				Focus:        store.Observation{ID: 1, Type: "decision", Title: "focus", Content: "content", CreatedAt: "2026-01-01"},
 				SessionInfo:  &store.Session{Project: "proj", StartedAt: "2026-01-01", Summary: &summary},
 				TotalInRange: 1,
 			}, nil

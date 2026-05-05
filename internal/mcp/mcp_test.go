@@ -100,7 +100,7 @@ func TestNewServerRegistersTools(t *testing.T) {
 func TestHandleSuggestTopicKeyReturnsFamilyBasedKey(t *testing.T) {
 	h := handleSuggestTopicKey()
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
-		"type":  "architecture",
+		"type":  "decision",
 		"title": "Auth model",
 	}}}
 
@@ -113,7 +113,7 @@ func TestHandleSuggestTopicKeyReturnsFamilyBasedKey(t *testing.T) {
 	}
 
 	text := callResultText(t, res)
-	if !strings.Contains(text, "Suggested topic_key: architecture/auth-model") {
+	if !strings.Contains(text, "Suggested topic_key: decision/auth-model") {
 		t.Fatalf("unexpected suggestion output: %q", text)
 	}
 }
@@ -138,7 +138,7 @@ func TestHandleSaveSuggestsTopicKeyWhenMissing(t *testing.T) {
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Auth architecture",
 		"content": "Define boundaries for auth middleware",
-		"type":    "architecture",
+		"type":    "decision",
 		"project": "engram",
 	}}}
 
@@ -151,7 +151,7 @@ func TestHandleSaveSuggestsTopicKeyWhenMissing(t *testing.T) {
 	}
 
 	text := callResultText(t, res)
-	if !strings.Contains(text, "Suggested topic_key: architecture/auth-architecture") {
+	if !strings.Contains(text, "Suggested topic_key: decision/auth-architecture") {
 		t.Fatalf("expected suggestion in save response, got %q", text)
 	}
 }
@@ -340,7 +340,7 @@ func TestHandleSaveCapturePromptFalseSkipsCurrentPrompt(t *testing.T) {
 	res, err := h(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":          "SDD artifact",
 		"content":        "## Apply progress",
-		"type":           "architecture",
+		"type":           "decision",
 		"project":        "engram",
 		"capture_prompt": false,
 	}}})
@@ -392,7 +392,7 @@ func TestHandleSaveDoesNotSuggestWhenTopicKeyProvided(t *testing.T) {
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":     "Auth architecture",
 		"content":   "Define boundaries for auth middleware",
-		"type":      "architecture",
+		"type":      "decision",
 		"project":   "engram",
 		"topic_key": "architecture/auth-model",
 	}}}
@@ -965,11 +965,11 @@ func TestMCPAdditionalCoverageBranches(t *testing.T) {
 	if err := s.CreateSession("s-extra", "engram", "/tmp/engram"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
-	firstID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "first", Content: "first content", Project: "engram"})
+	firstID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "decision", Title: "first", Content: "first content", Project: "engram"})
 	if err != nil {
 		t.Fatalf("add first: %v", err)
 	}
-	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "second", Content: "second content", Project: "engram"})
+	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "decision", Title: "second", Content: "second content", Project: "engram"})
 	if err != nil {
 		t.Fatalf("add second: %v", err)
 	}
@@ -1057,7 +1057,7 @@ func TestHandleUpdateAcceptsAllOptionalFields(t *testing.T) {
 		"id":        float64(id),
 		"title":     "Updated",
 		"content":   "Updated content",
-		"type":      "architecture",
+		"type":      "decision",
 		"project":   "engram",
 		"scope":     "personal",
 		"topic_key": "architecture/auth-model",
@@ -1114,15 +1114,15 @@ func TestHandleTimelineBeforeSectionAndSummaryBranches(t *testing.T) {
 	if err := s.CreateSession("s-timeline", "engram", "/tmp/engram"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
-	_, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "first", Content: "first", Project: "engram"})
+	_, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "decision", Title: "first", Content: "first", Project: "engram"})
 	if err != nil {
 		t.Fatalf("add first observation: %v", err)
 	}
-	focusID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "second", Content: "second", Project: "engram"})
+	focusID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "decision", Title: "second", Content: "second", Project: "engram"})
 	if err != nil {
 		t.Fatalf("add second observation: %v", err)
 	}
-	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "third", Content: "third", Project: "engram"})
+	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "decision", Title: "third", Content: "third", Project: "engram"})
 	if err != nil {
 		t.Fatalf("add third observation: %v", err)
 	}
@@ -1154,7 +1154,7 @@ func TestHandleGetObservationIncludesTopicAndToolMetadata(t *testing.T) {
 	}
 	id, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-get-meta",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Auth model",
 		Content:   "Details",
 		Project:   "engram",
@@ -1352,7 +1352,7 @@ func TestHandleSave_CandidatesReturned(t *testing.T) {
 	req1 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "We use sessions for auth middleware",
 		"content": "Session-based auth in the middleware layer keeps things simple",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	res1, err := h(context.Background(), req1)
 	if err != nil {
@@ -1366,7 +1366,7 @@ func TestHandleSave_CandidatesReturned(t *testing.T) {
 	req2 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Switched from sessions to JWT for auth",
 		"content": "Replacing session auth with JWT tokens improves scalability",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	res2, err := h(context.Background(), req2)
 	if err != nil {
@@ -1477,7 +1477,7 @@ func TestHandleSave_TopicKeyRevision_ReturnsCandidates(t *testing.T) {
 	req1 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Auth architecture sessions design",
 		"content": "Session-based auth design for the backend service",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	if _, err := h(context.Background(), req1); err != nil {
 		t.Fatalf("first save: %v", err)
@@ -1487,7 +1487,7 @@ func TestHandleSave_TopicKeyRevision_ReturnsCandidates(t *testing.T) {
 	req2 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":     "Auth architecture sessions design updated",
 		"content":   "Updated session-based auth design",
-		"type":      "architecture",
+		"type":      "decision",
 		"topic_key": "architecture/auth-sessions",
 	}}}
 	if _, err := h(context.Background(), req2); err != nil {
@@ -1498,7 +1498,7 @@ func TestHandleSave_TopicKeyRevision_ReturnsCandidates(t *testing.T) {
 	req3 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":     "Auth architecture sessions design revised",
 		"content":   "Revised session-based auth design for the service layer",
-		"type":      "architecture",
+		"type":      "decision",
 		"topic_key": "architecture/auth-sessions",
 	}}}
 	res3, err := h(context.Background(), req3)
@@ -1549,7 +1549,7 @@ func TestHandleSearch_SupersededAnnotation(t *testing.T) {
 	// Save two observations.
 	oldID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-search-annot",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Old auth design",
 		Content:   "We use session-based auth",
 		Project:   "engram",
@@ -1560,7 +1560,7 @@ func TestHandleSearch_SupersededAnnotation(t *testing.T) {
 	}
 	newID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-search-annot",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "New auth design",
 		Content:   "We switched to JWT auth",
 		Project:   "engram",
@@ -2119,7 +2119,7 @@ func TestHandleSaveCreatesProjectScopedSession(t *testing.T) {
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Decision",
 		"content": "Architecture note",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	res, err := h(context.Background(), req)
 	if err != nil || res.IsError {
@@ -4702,7 +4702,7 @@ func TestServerInstructions_ConflictSurfacingBlock(t *testing.T) {
 		// Heuristic: ask for high-stakes relation+type combos
 		"supersedes",
 		"conflicts_with",
-		"architecture",
+		"decision",
 
 		// Conversational (not blocking) resolution pattern
 		"conversationally",
@@ -4745,7 +4745,7 @@ func TestHandleSave_MCPConfig_OverridesDefaults(t *testing.T) {
 	req1 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "JWT auth token session management",
 		"content": "Session-based auth in the middleware layer keeps things simple",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	if _, err := h(context.Background(), req1); err != nil {
 		t.Fatalf("first save: %v", err)
@@ -4755,7 +4755,7 @@ func TestHandleSave_MCPConfig_OverridesDefaults(t *testing.T) {
 	req2 := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Switched from JWT sessions to token auth",
 		"content": "Replacing session auth with JWT tokens improves scalability",
-		"type":    "architecture",
+		"type":    "decision",
 	}}}
 	res2, err := h(context.Background(), req2)
 	if err != nil {
@@ -4951,7 +4951,7 @@ func TestMemSearch_TitleEnrichment_SupersedesAndSupersededBy(t *testing.T) {
 
 	oldID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1c",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Old JWT approach",
 		Content:   "We used session-based auth before JWT",
 		Project:   "engram",
@@ -4962,7 +4962,7 @@ func TestMemSearch_TitleEnrichment_SupersedesAndSupersededBy(t *testing.T) {
 	}
 	newID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1c",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "New JWT approach",
 		Content:   "JWT is now our authentication strategy",
 		Project:   "engram",
@@ -5119,7 +5119,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	// Central obs that has all three relation types as source.
 	centralID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Central architecture decision",
 		Content:   "This memory has all relation types",
 		Project:   "engram",
@@ -5131,7 +5131,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	// Target for supersedes.
 	supersedesTargetID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Old architecture",
 		Content:   "The old architecture approach",
 		Project:   "engram",
@@ -5143,7 +5143,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	// Target for conflicts_with.
 	conflictsTargetID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Competing architecture",
 		Content:   "A competing approach that conflicts",
 		Project:   "engram",
@@ -5205,7 +5205,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	// Also add a superseded_by: create another obs that supersedes central (so central is target).
 	supersederID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
-		Type:      "architecture",
+		Type:      "decision",
 		Title:     "Newer architecture",
 		Content:   "The newest architecture supersedes central",
 		Project:   "engram",

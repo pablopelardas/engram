@@ -960,7 +960,7 @@ func TestHandlerPushRejectsObservationReferencingUnknownSession(t *testing.T) {
 	st := &fakeStore{}
 	srv := New(st, fakeAuth{}, 0)
 
-	payload := []byte(`{"observations":[{"sync_id":"obs-missing","session_id":"missing","type":"note","title":"t","content":"c","scope":"project"}]}`)
+	payload := []byte(`{"observations":[{"sync_id":"obs-missing","session_id":"missing","type":"decision","title":"t","content":"c","scope":"project"}]}`)
 	normalizedPayload, err := coerceChunkProject(payload, "proj-a")
 	if err != nil {
 		t.Fatalf("coerce payload: %v", err)
@@ -995,7 +995,7 @@ func TestHandlerPushAcceptsReferencesToSessionsAlreadyInRemoteHistory(t *testing
 		t.Fatalf("expected seed push 200, got %d body=%q", seedRec.Code, seedRec.Body.String())
 	}
 
-	obsPayload := []byte(`{"observations":[{"sync_id":"obs-2","session_id":"s-existing","type":"note","title":"next","content":"payload","scope":"project"}]}`)
+	obsPayload := []byte(`{"observations":[{"sync_id":"obs-2","session_id":"s-existing","type":"decision","title":"next","content":"payload","scope":"project"}]}`)
 	normalizedObs, err := coerceChunkProject(obsPayload, "proj-a")
 	if err != nil {
 		t.Fatalf("coerce observation payload: %v", err)
