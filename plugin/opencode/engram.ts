@@ -18,7 +18,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-const ENGRAM_PORT = parseInt(process.env.ENGRAM_PORT ?? "7437")
+const ENGRAM_PORT = parseInt(process.env.INTUIT_ENGRAM_PORT ?? process.env.ENGRAM_PORT ?? "7438")
 const ENGRAM_URL = `http://127.0.0.1:${ENGRAM_PORT}`
 const ENGRAM_BIN = process.env.INTUIT_ENGRAM_BIN ?? process.env.ENGRAM_BIN ?? "intuit-engram"
 

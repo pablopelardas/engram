@@ -5,8 +5,8 @@
 # the passive capture endpoint. All extraction logic lives in the
 # Go server — this script is intentionally minimal.
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+INTUIT_ENGRAM_PORT="${INTUIT_ENGRAM_PORT:-7438}"
+ENGRAM_URL="http://127.0.0.1:${INTUIT_ENGRAM_PORT}"
 
 # Load shared helpers
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -35,3 +35,4 @@ curl -sf "${ENGRAM_URL}/observations/passive" \
   > /dev/null 2>&1
 
 exit 0
+

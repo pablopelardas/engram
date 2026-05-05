@@ -10,8 +10,8 @@
 #
 # MUST exit 0 always and output valid JSON — otherwise Claude Code blocks the message.
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+INTUIT_ENGRAM_PORT="${INTUIT_ENGRAM_PORT:-7438}"
+ENGRAM_URL="http://127.0.0.1:${INTUIT_ENGRAM_PORT}"
 
 # Windows Git Bash/MSYS2 can fail while forking helper processes under
 # enterprise Defender/EDR, which makes Claude Code wait on prompt submission.
@@ -236,3 +236,4 @@ fi
 
 echo "$OUTPUT"
 exit 0
+

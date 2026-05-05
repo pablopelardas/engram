@@ -724,7 +724,7 @@ func printUpdateCheckResult(result versioncheck.CheckResult) {
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 func cmdServe(cfg store.Config) {
-	port := 7437 // "ENGR" on phone keypad vibes
+	port := 7438 // intuit-engram uses 7438 to avoid conflict with engram (7437)
 	if p := os.Getenv("ENGRAM_PORT"); p != "" {
 		if n, err := strconv.Atoi(p); err == nil {
 			port = n
@@ -2340,7 +2340,7 @@ Usage:
   %s <command> [arguments]
 
 Commands:
-  serve [port]       Start HTTP API server (default: 7437)
+  serve [port]       Start HTTP API server (default: 7438)
   mcp [--tools=PROFILE]
                      Start MCP server (stdio transport, for any AI agent)
                        Profiles: agent (15 tools), admin (4 tools), all (default, 19)
@@ -2397,7 +2397,7 @@ Environment:
   INTUIT_ENGRAM_DATA_DIR
 	                     Override data directory (default: ~/.intuit-engram)
   ENGRAM_DATA_DIR    Legacy override for compatibility
-  ENGRAM_PORT        Override HTTP server port (default: 7437)
+  ENGRAM_PORT        Override HTTP server port (default: 7438)
   ENGRAM_PROJECT     Default project hint for serve sync status fallback
   ENGRAM_DATABASE_URL
 	                     Postgres DSN for %s cloud serve

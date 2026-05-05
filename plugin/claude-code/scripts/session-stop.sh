@@ -4,8 +4,8 @@
 # Marks the session as ended via the HTTP API.
 # Runs async so it doesn't block Claude's response.
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+INTUIT_ENGRAM_PORT="${INTUIT_ENGRAM_PORT:-7438}"
+ENGRAM_URL="http://127.0.0.1:${INTUIT_ENGRAM_PORT}"
 
 INPUT=$(cat)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
@@ -21,3 +21,4 @@ curl -sf "${ENGRAM_URL}/sessions/${SESSION_ID}/end" \
   > /dev/null 2>&1
 
 exit 0
+

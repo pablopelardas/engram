@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "intuit-engram": {
-      "command": "intuit-engram",
-      "args": ["mcp", "--tools=agent"]
+      "args": [
+        "mcp",
+        "--tools=agent"
+      ],
+      "command": "D:\\engram\\intuit-engram.exe"
     }
   }
 }

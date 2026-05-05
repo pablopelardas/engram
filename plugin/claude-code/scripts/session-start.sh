@@ -6,8 +6,8 @@
 # 3. Auto-imports git-synced chunks if .intuit-engram/manifest.json exists
 # 4. Injects Memory Protocol instructions + memory context
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+INTUIT_ENGRAM_PORT="${INTUIT_ENGRAM_PORT:-7438}"
+ENGRAM_URL="http://127.0.0.1:${INTUIT_ENGRAM_PORT}"
 IMPORT_TIMEOUT_SECS=8
 LOCK_TTL_SECS=$((IMPORT_TIMEOUT_SECS + 4))
 LOCK_METADATA_STALE_SECS=$((LOCK_TTL_SECS * 5))
@@ -180,3 +180,4 @@ if [ -n "$CONTEXT" ]; then
 fi
 
 exit 0
+

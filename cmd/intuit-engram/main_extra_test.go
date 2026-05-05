@@ -254,12 +254,12 @@ func TestCmdServeParsesPortAndErrors(t *testing.T) {
 		startErr  error
 		wantFatal bool
 	}{
-		{name: "default port", wantPort: 7437},
+		{name: "default port", wantPort: 7438},
 		{name: "env port", envPort: "8123", wantPort: 8123},
 		{name: "arg overrides env", envPort: "8123", argPort: "9001", wantPort: 9001},
-		{name: "invalid env keeps default", envPort: "nope", wantPort: 7437},
+		{name: "invalid env keeps default", envPort: "nope", wantPort: 7438},
 		{name: "invalid arg keeps env", envPort: "8123", argPort: "bad", wantPort: 8123},
-		{name: "start failure", wantPort: 7437, startErr: errors.New("listen failed"), wantFatal: true},
+		{name: "start failure", wantPort: 7438, startErr: errors.New("listen failed"), wantFatal: true},
 	}
 
 	for _, tc := range tests {
