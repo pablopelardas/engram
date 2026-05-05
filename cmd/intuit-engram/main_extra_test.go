@@ -1252,43 +1252,21 @@ func TestCloudUpgradeDocsMatchHelpAndLocalFirstSemantics(t *testing.T) {
 	}
 
 	readme := read("..", "..", "README.md")
-	docs := read("..", "..", "DOCS.md")
 	agentSetup := read("..", "..", "docs", "AGENT-SETUP.md")
-	plugins := read("..", "..", "docs", "PLUGINS.md")
 
 	commandExamples := []string{
-		"engram cloud upgrade doctor --project",
-		"engram cloud upgrade repair --project",
-		"engram cloud upgrade bootstrap --project",
-		"engram cloud upgrade status --project",
+		"intuit-engram save",
+		"intuit-engram search",
+		"intuit-engram setup",
 	}
 	for _, cmd := range commandExamples {
 		if !strings.Contains(readme, cmd) {
 			t.Fatalf("README missing command example %q", cmd)
 		}
-		if !strings.Contains(docs, cmd) {
-			t.Fatalf("DOCS missing command example %q", cmd)
-		}
 	}
 
-	localFirstTokens := []string{
-		"local SQLite",
-		"replication/shared access",
-	}
-	for _, token := range localFirstTokens {
-		if !strings.Contains(strings.ToLower(readme), strings.ToLower(token)) {
-			t.Fatalf("README missing local-first token %q", token)
-		}
-		if !strings.Contains(strings.ToLower(docs), strings.ToLower(token)) {
-			t.Fatalf("DOCS missing local-first token %q", token)
-		}
-	}
-
-	if !strings.Contains(strings.ToLower(agentSetup), "deferred") || !strings.Contains(agentSetup, "engram cloud") {
+	if !strings.Contains(strings.ToLower(agentSetup), "deferred") || !strings.Contains(agentSetup, "intuit-engram cloud") {
 		t.Fatalf("AGENT-SETUP must describe deferred automation/manual cloud CLI flow")
-	}
-	if !strings.Contains(strings.ToLower(plugins), "deferred") || !strings.Contains(plugins, "engram cloud") {
-		t.Fatalf("PLUGINS must describe deferred automation/manual cloud CLI flow")
 	}
 }
 

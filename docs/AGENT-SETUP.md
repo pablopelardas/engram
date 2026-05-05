@@ -2,13 +2,13 @@
 
 # Agent Setup
 
-Engram works with **any MCP-compatible agent**. Pick your agent below.
+Intuit Engram works with **any MCP-compatible agent**. Pick your agent below.
 
-> Cloud bootstrap automation in agent scripts/plugins is intentionally deferred in this rollout. Use `engram cloud ...` manually for now.
+> Cloud bootstrap automation in agent scripts/plugins is intentionally deferred in this rollout. Use `intuit-engram cloud ...` manually for now.
 >
 > Deferred validation scope for this rollout:
 > - Setup/plugin scripts are **not** yet validated as cloud enrollment/login orchestrators.
-> - `engram setup ...` installs MCP/plugin integrations only; it does **not** auto-run `engram cloud config/enroll/upgrade`.
+> - `intuit-engram setup ...` installs MCP/plugin integrations only; it does **not** auto-run `intuit-engram cloud config/enroll/upgrade`.
 > - Cloud onboarding contract remains CLI-first until script-level cloud flows are explicitly implemented.
 
 ## Quick Reference
@@ -16,20 +16,20 @@ Engram works with **any MCP-compatible agent**. Pick your agent below.
 | Agent | One-liner | Manual Config |
 |-------|-----------|---------------|
 | Claude Code | `claude plugin marketplace add Gentleman-Programming/engram && claude plugin install engram` | [Details](#claude-code) |
-| OpenCode | `engram setup opencode` | [Details](#opencode) |
-| Gemini CLI | `engram setup gemini-cli` | [Details](#gemini-cli) |
-| Codex | `engram setup codex` | [Details](#codex) |
-| VS Code | `code --add-mcp '{"name":"engram","command":"engram","args":["mcp"]}'` | [Details](#vs-code-copilot--claude-code-extension) |
+| OpenCode | `intuit-engram setup opencode` | [Details](#opencode) |
+| Gemini CLI | `intuit-engram setup gemini-cli` | [Details](#gemini-cli) |
+| Codex | `intuit-engram setup codex` | [Details](#codex) |
+| VS Code | `code --add-mcp '{"name":"intuit-engram","command":"intuit-engram","args":["mcp"]}'` | [Details](#vs-code-copilot--claude-code-extension) |
 | Antigravity | Manual JSON config | [Details](#antigravity) |
 | Cursor | Manual JSON config | [Details](#cursor) |
 | Windsurf | Manual JSON config | [Details](#windsurf) |
-| Any MCP agent | `engram mcp` (stdio) | [Details](#any-other-mcp-agent) |
+| Any MCP agent | `intuit-engram mcp` (stdio) | [Details](#any-other-mcp-agent) |
 
 ### Project auto-detection (important)
 
-**Do not pass `project` to write tools during normal operation.** Engram auto-detects the project from the server's working directory (cwd) using `.engram/config.json`, git remote URL, repo root name, or directory basename. Agents that include `project` in `mem_save` or similar calls will have that argument ignored unless they are using the explicit ambiguous-project recovery flow below.
+**Do not pass `project` to write tools during normal operation.** Intuit Engram auto-detects the project from the server's working directory (cwd) using `.intuit-engram/config.json`, git remote URL, repo root name, or directory basename. Agents that include `project` in `mem_save` or similar calls will have that argument ignored unless they are using the explicit ambiguous-project recovery flow below.
 
-To lock write tools to the canonical project for a repo, add `.engram/config.json` at the repo root:
+To lock write tools to the canonical project for a repo, add `.intuit-engram/config.json` at the repo root:
 
 ```json
 {
@@ -39,7 +39,7 @@ To lock write tools to the canonical project for a repo, add `.engram/config.jso
 
 When present, `project_name` is used for writes from the repo and its subdirectories and overrides lower-confidence cwd/git detection. This is a write lock only: read tools can still use an explicit `project` filter when you need to query another existing project. Empty or invalid `project_name` values fail writes loudly instead of falling back silently.
 
-**Recommended first call:** `mem_current_project` — confirms which project Engram detected before you start writing. Returns `project_source` (how it was detected) and `available_projects` (if cwd is ambiguous).
+**Recommended first call:** `mem_current_project` — confirms which project Intuit Engram detected before you start writing. Returns `project_source` (how it was detected) and `available_projects` (if cwd is ambiguous).
 
 If a write tool returns `ambiguous_project`, the agent must not guess. This happens when the MCP server is started from a parent directory that contains multiple repositories, for example:
 
@@ -58,7 +58,7 @@ The first write fails with an error like:
   "available_projects": [
     "alan-thegentleman",
     "angular-18-jest-playwright",
-    "engram"
+    "intuit-engram"
   ]
 }
 ```
@@ -72,11 +72,11 @@ Ask the user to choose exactly one value from `available_projects`, then retry o
 }
 ```
 
-On success, Engram writes to the selected project and reports the recovery source:
+On success, Intuit Engram writes to the selected project and reports the recovery source:
 
 ```json
 {
-  "project": "engram",
+  "project": "intuit-engram",
   "project_source": "user_selected_after_ambiguous_project",
   "project_path": "/Users/you/work/engram"
 }
@@ -91,25 +91,25 @@ This is a narrow rescue path, not a free-form project override:
 - `project`, after trimming surrounding whitespace, must exactly match one of the reported `available_projects`.
 - Normalized variants and guesses are rejected: if `available_projects` contains `foo--bar`, retry with `foo--bar`, not `foo-bar`.
 - Empty or whitespace-only choices are rejected.
-- In all non-ambiguous cases, `.engram/config.json`/git/cwd detection remains authoritative and the explicit `project` field is ignored.
+- In all non-ambiguous cases, `.intuit-engram/config.json`/git/cwd detection remains authoritative and the explicit `project` field is ignored.
 
 Mental model:
 
 ```text
 mem_save fails with ambiguous_project
         ↓
-Engram returns available_projects
+Intuit Engram returns available_projects
         ↓
 agent asks the user to choose one exact value
         ↓
 agent retries with project + project_choice_reason
         ↓
-Engram validates the choice came from ambiguity
+Intuit Engram validates the choice came from ambiguity
         ↓
-Engram saves to the selected project
+Intuit Engram saves to the selected project
 ```
 
-Alternatives: `cd` into the target repo before starting the MCP server, or add repo `.engram/config.json`.
+Alternatives: `cd` into the target repo before starting the MCP server, or add repo `.intuit-engram/config.json`.
 
 **Read tools** (`mem_search`, `mem_context`, `mem_get_observation`, `mem_stats`, `mem_timeline`) accept an optional `project` override validated against the store. Omit it to auto-detect.
 
@@ -117,26 +117,26 @@ Alternatives: `cd` into the target repo before starting the MCP server, or add r
 
 ## OpenCode
 
-> **Prerequisite**: Install the `engram` binary first (via [Homebrew](INSTALLATION.md#homebrew-macos--linux), [Windows binary](INSTALLATION.md#windows), [binary download](INSTALLATION.md#download-binary-all-platforms), or [source](INSTALLATION.md#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking.
+> **Prerequisite**: Install the `intuit-engram` binary first. The plugin needs it for the MCP server and session tracking.
 
 **Recommended: Full setup with one command** — installs the plugin AND registers the MCP server in `opencode.json` automatically:
 
 ```bash
-engram setup opencode
+intuit-engram setup opencode
 ```
 
 This does three things:
-1. Copies the plugin to `~/.config/opencode/plugins/engram.ts` (session tracking, Memory Protocol, compaction recovery)
-2. Adds the `engram` MCP server entry to your `opencode.json` with `--tools=agent` (14 agent-facing tools)
+1. Copies the plugin to `~/.config/opencode/plugins/intuit-engram.ts` (session tracking, Memory Protocol, compaction recovery)
+2. Adds the `intuit-engram` MCP server entry to your `opencode.json` with `--tools=agent` (14 agent-facing tools)
 3. Adds `opencode-subagent-statusline` to your `tui.json` or `tui.jsonc` so OpenCode shows sub-agent activity in the sidebar/home footer
 
 The plugin auto-starts the HTTP server if needed for session tracking. If your environment blocks background processes, run it manually:
 
 ```bash
-engram serve &
+intuit-engram serve &
 ```
 
-> **Windows**: OpenCode uses `~/.config/opencode/` on Windows too (it does not read `%APPDATA%\opencode\`). `engram setup opencode` writes to `~/.config/opencode/plugins/` and `~/.config/opencode/opencode.json`. To run the server in the background: `Start-Process engram -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `engram serve` in a separate terminal.
+> **Windows**: OpenCode uses `~/.config/opencode/` on Windows too (it does not read `%APPDATA%\opencode\`). `intuit-engram setup opencode` writes to `~/.config/opencode/plugins/` and `~/.config/opencode/opencode.json`. To run the server in the background: `Start-Process engram -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `intuit-engram serve` in a separate terminal.
 
 **Alternative: Manual MCP-only setup** (no plugin, all 18 tools by default):
 
@@ -145,9 +145,9 @@ Add to your `opencode.json` (global: `~/.config/opencode/opencode.json` on all p
 ```json
 {
   "mcp": {
-    "engram": {
+    "intuit-engram": {
       "type": "local",
-      "command": ["engram", "mcp"],
+      "command": ["intuit-engram", "mcp"],
       "enabled": true
     }
   }
@@ -160,24 +160,25 @@ See [Plugins → OpenCode Plugin](PLUGINS.md#opencode-plugin) for details on wha
 
 ## Claude Code
 
-> **Prerequisite**: Install the `engram` binary first (via [Homebrew](INSTALLATION.md#homebrew-macos--linux), [Windows binary](INSTALLATION.md#windows), [binary download](INSTALLATION.md#download-binary-all-platforms), or [source](INSTALLATION.md#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking scripts.
+> **Prerequisite**: Install the `intuit-engram` binary first. The plugin needs it for the MCP server and session 
+tracking scripts.
 
 **Option A: Plugin via marketplace (recommended)** — full session management, auto-import, compaction recovery, and Memory Protocol skill:
 
 ```bash
 claude plugin marketplace add Gentleman-Programming/engram
-claude plugin install engram
+claude plugin install intuit-engram
 ```
 
 That's it. The plugin registers the MCP server, hooks, and Memory Protocol skill automatically.
 
-**Option B: Plugin via `engram setup`** — same plugin, installed from the embedded binary:
+**Option B: Plugin via `intuit-engram setup`** — same plugin, installed from the embedded binary:
 
 ```bash
-engram setup claude-code
+intuit-engram setup claude-code
 ```
 
-During setup, you'll be asked whether to add engram's agent-profile MCP tools to `~/.claude/settings.json` `permissions.allow`. The setup writes entries for both the durable user-level MCP server id (`mcp__engram__...`) and the plugin-scoped server id used by older Claude Code plugin installs, so re-running setup repairs stale or incomplete allowlists without adding startup delay.
+During setup, you'll be asked whether to add intuit-engram's agent-profile MCP tools to `~/.claude/settings.json` `permissions.allow`. The setup writes entries for both the durable user-level MCP server id (`mcp__intuit-engram__...`) and the plugin-scoped server id used by older Claude Code plugin installs, so re-running setup repairs stale or incomplete allowlists without adding startup delay.
 
 **Option C: Bare MCP** — all 18 tools by default, no session management:
 
@@ -186,22 +187,22 @@ Add to your `.claude/settings.json` (project) or `~/.claude/settings.json` (glob
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-With bare MCP, add a [Surviving Compaction](#surviving-compaction-recommended) prompt to your `CLAUDE.md` so the agent remembers to use Engram after context resets.
+With bare MCP, add a [Surviving Compaction](#surviving-compaction-recommended) prompt to your `CLAUDE.md` so the agent remembers to use Intuit Engram after context resets.
 
 > **Windows note:** The Claude Code plugin hooks use bash scripts. On Windows, Claude Code runs hooks through Git Bash (bundled with [Git for Windows](https://gitforwindows.org/)) or WSL. The `UserPromptSubmit` hook automatically switches to a fork-light safe path under Git Bash/MSYS2: the first-prompt ToolSearch still runs, while later save-reminder checks are skipped so prompt submission does not block. If Git Bash itself is blocked by Defender/EDR, the plugin also ships `scripts/user-prompt-submit.ps1` as a native PowerShell fallback for local override/testing. **Option C (Bare MCP)** remains the no-hook fallback and works natively on Windows without any shell dependency.
 
 PowerShell fallback test and local override example:
 
 ```powershell
-'{"session_id":"edr/test:1"}' | pwsh -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\engram\plugin\claude-code\scripts\user-prompt-submit.ps1"
+'{"session_id":"edr/test:1"}' | pwsh -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\intuit-engram\plugin\claude-code\scripts\user-prompt-submit.ps1"
 ```
 
 ```json
@@ -212,7 +213,8 @@ PowerShell fallback test and local override example:
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:\\path\\to\\engram\\plugin\\claude-code\\scripts\\user-prompt-submit.ps1\"",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File 
+\"C:\\path\\to\\intuit-engram\\plugin\\claude-code\\scripts\\user-prompt-submit.ps1\"",
             "timeout": 2
           }
         ]
@@ -231,23 +233,23 @@ See [Plugins → Claude Code Plugin](PLUGINS.md#claude-code-plugin) for details 
 Recommended: one command to set up MCP + compaction recovery instructions:
 
 ```bash
-engram setup gemini-cli
+intuit-engram setup gemini-cli
 ```
 
-`engram setup gemini-cli` now does three things:
-- Registers `mcpServers.engram` in `~/.gemini/settings.json` (Windows: `%APPDATA%\gemini\settings.json`)
-- Writes `~/.gemini/system.md` with the Engram Memory Protocol (includes post-compaction recovery)
+`intuit-engram setup gemini-cli` now does three things:
+- Registers `mcpServers.intuit-engram` in `~/.gemini/settings.json` (Windows: `%APPDATA%\gemini\settings.json`)
+- Writes `~/.gemini/system.md` with the Intuit Engram Memory Protocol (includes post-compaction recovery)
 - Ensures `~/.gemini/.env` contains `GEMINI_SYSTEM_MD=1` so Gemini actually loads that system prompt
 
-> `engram setup gemini-cli` automatically writes the full Memory Protocol to `~/.gemini/system.md`, so the agent knows exactly when to save, search, and close sessions. No additional configuration needed.
+> `intuit-engram setup gemini-cli` automatically writes the full Memory Protocol to `~/.gemini/system.md`, so the agent knows exactly when to save, search, and close sessions. No additional configuration needed.
 
 Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/settings.json` (project); on Windows: `%APPDATA%\gemini\settings.json`:
 
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
@@ -257,7 +259,7 @@ Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/s
 Or via the CLI:
 
 ```bash
-gemini mcp add engram engram mcp
+gemini mcp add engram intuit-engram mcp
 ```
 
 ---
@@ -267,24 +269,24 @@ gemini mcp add engram engram mcp
 Recommended: one command to set up MCP + compaction recovery instructions:
 
 ```bash
-engram setup codex
+intuit-engram setup codex
 ```
 
-`engram setup codex` now does three things:
-- Registers `[mcp_servers.engram]` in `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`)
-- Writes `~/.codex/engram-instructions.md` with the Engram Memory Protocol
-- Writes `~/.codex/engram-compact-prompt.md` and points `experimental_compact_prompt_file` to it, so compaction output includes a required memory-save instruction
+`intuit-engram setup codex` now does three things:
+- Registers `[mcp_servers.intuit-engram]` in `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`)
+- Writes `~/.codex/intuit-engram-instructions.md` with the Intuit Engram Memory Protocol
+- Writes `~/.codex/intuit-engram-compact-prompt.md` and points `experimental_compact_prompt_file` to it, so compaction output includes a required memory-save instruction
 
-> `engram setup codex` automatically writes the full Memory Protocol to `~/.codex/engram-instructions.md` and a compaction recovery prompt to `~/.codex/engram-compact-prompt.md`. No additional configuration needed.
+> `intuit-engram setup codex` automatically writes the full Memory Protocol to `~/.codex/intuit-engram-instructions.md` and a compaction recovery prompt to `~/.codex/intuit-engram-compact-prompt.md`. No additional configuration needed.
 
 Manual alternative: add to your `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`):
 
 ```toml
-model_instructions_file = "~/.codex/engram-instructions.md"
-experimental_compact_prompt_file = "~/.codex/engram-compact-prompt.md"
+model_instructions_file = "~/.codex/intuit-engram-instructions.md"
+experimental_compact_prompt_file = "~/.codex/intuit-engram-compact-prompt.md"
 
-[mcp_servers.engram]
-command = "engram"
+[mcp_servers.intuit-engram]
+command = "intuit-engram"
 args = ["mcp"]
 ```
 
@@ -301,8 +303,8 @@ Add to `.vscode/mcp.json` in your project:
 ```json
 {
   "servers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
@@ -313,7 +315,7 @@ Add to `.vscode/mcp.json` in your project:
 
 1. Open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
 2. Run **MCP: Open User Configuration**
-3. Add the same `engram` server entry above to VS Code User `mcp.json`:
+3. Add the same `intuit-engram` server entry above to VS Code User `mcp.json`:
    - macOS: `~/Library/Application Support/Code/User/mcp.json`
    - Linux: `~/.config/Code/User/mcp.json`
    - Windows: `%APPDATA%\Code\User\mcp.json`
@@ -321,12 +323,12 @@ Add to `.vscode/mcp.json` in your project:
 **Option C: CLI one-liner:**
 
 ```bash
-code --add-mcp "{\"name\":\"engram\",\"command\":\"engram\",\"args\":[\"mcp\"]}"
+code --add-mcp "{\"name\":\"intuit-engram\",\"command\":\"intuit-engram\",\"args\":[\"mcp\"]}"
 ```
 
 > **Using Claude Code extension in VS Code?** The Claude Code extension runs inside VS Code but uses its own MCP config. Follow the [Claude Code](#claude-code) instructions above — the `.claude/settings.json` config works whether you use Claude Code as a CLI or as a VS Code extension.
 
-> **Windows**: Make sure `engram.exe` is in your `PATH`. VS Code resolves MCP commands from the system PATH.
+> **Windows**: Make sure `intuit-engram.exe` is in your `PATH`. VS Code resolves MCP commands from the system PATH.
 
 **Adding the Memory Protocol** (recommended — teaches the agent when to save and search memories):
 
@@ -360,8 +362,8 @@ See [Surviving Compaction](#surviving-compaction-recommended) for the minimal ve
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
@@ -383,15 +385,15 @@ Add to your `.cursor/mcp.json` (same path on all platforms — it's project-rela
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-> **Windows**: Make sure `engram.exe` is in your `PATH`. Cursor resolves MCP commands from the system PATH.
+> **Windows**: Make sure `intuit-engram.exe` is in your `PATH`. Cursor resolves MCP commands from the system PATH.
 
 > **Memory Protocol:** Cursor uses `.mdc` rule files stored in `.cursor/rules/` (Cursor 0.43+). Create an `engram.mdc` file (any name works — the `.mdc` extension is what matters) and place it in one of:
 > - **Project-specific:** `.cursor/rules/engram.mdc` — commit to git so your whole team gets it
@@ -410,8 +412,8 @@ Add to your `~/.windsurf/mcp.json` (Windows: `%USERPROFILE%\.windsurf\mcp.json`)
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "intuit-engram": {
+      "command": "intuit-engram",
       "args": ["mcp"]
     }
   }
@@ -424,18 +426,18 @@ Add to your `~/.windsurf/mcp.json` (Windows: `%USERPROFILE%\.windsurf\mcp.json`)
 
 ## Any other MCP agent
 
-The pattern is always the same — point your agent's MCP config to `engram mcp` via stdio transport.
+The pattern is always the same — point your agent's MCP config to `intuit-engram mcp` via stdio transport.
 
 ---
 
 ## Surviving Compaction (Recommended)
 
-When your agent compacts (summarizes long conversations to free context), it starts fresh — and might forget about Engram. To make memory truly resilient, add this to your agent's system prompt or config file:
+When your agent compacts (summarizes long conversations to free context), it starts fresh — and might forget about Intuit Engram. To make memory truly resilient, add this to your agent's system prompt or config file:
 
 **For Claude Code** (`CLAUDE.md`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Intuit Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -449,7 +451,7 @@ Save memories proactively with mem_save after significant work.
 **For Gemini CLI** (`GEMINI.md`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Intuit Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -457,7 +459,7 @@ You have access to Engram persistent memory via MCP tools (mem_save, mem_search,
 **For VS Code** (`Code/User/prompts/*.instructions.md` or custom instructions):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Intuit Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -465,7 +467,7 @@ You have access to Engram persistent memory via MCP tools (mem_save, mem_search,
 **For Antigravity** (`~/.gemini/GEMINI.md` or `.agent/rules/`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Intuit Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -479,13 +481,13 @@ The `alwaysApply: true` frontmatter tells Cursor to load this rule in every conv
 alwaysApply: true
 ---
 
-You have access to Engram persistent memory (mem_save, mem_search, mem_context).
+You have access to Intuit Engram persistent memory (mem_save, mem_search, mem_context).
 Save proactively after significant work. After context resets, call mem_context to recover state.
 ```
 
 **For Windsurf** (`.windsurfrules`):
 ```
-You have access to Engram persistent memory (mem_save, mem_search, mem_context).
+You have access to Intuit Engram persistent memory (mem_save, mem_search, mem_context).
 Save proactively after significant work. After context resets, call mem_context to recover state.
 ```
 
@@ -551,7 +553,7 @@ Once the agent calls `mem_judge` with a verdict:
 - If the relation is `conflicts_with`, future `mem_search` results show `conflicts: #<id> (<title>)` on both observations.
 - If the relation is `compatible`, `related`, `scoped`, or `not_conflict`, the judgment is stored in `memory_relations` but no annotation appears in search results.
 
-**Cloud sync**: when the project is enrolled in Engram Cloud and autosync is enabled, `mem_judge` verdicts propagate to other machines via the standard mutation push/pull cycle. The annotation appears in `mem_search` results on any machine that has pulled the relevant mutations. Relations that reference an observation not yet present locally are deferred and retried automatically on subsequent pull cycles — the verdict is never lost.
+**Cloud sync**: when the project is enrolled in Intuit Engram Cloud and autosync is enabled, `mem_judge` verdicts propagate to other machines via the standard mutation push/pull cycle. The annotation appears in `mem_search` results on any machine that has pulled the relevant mutations. Relations that reference an observation not yet present locally are deferred and retried automatically on subsequent pull cycles — the verdict is never lost.
 
 Nothing breaks if `mem_judge` is never called — pending relations accumulate unjudged but do not affect other operations.
 
@@ -565,11 +567,11 @@ See [Plugins → mem_compare reference](PLUGINS.md#mcp-tool-reference--mem_compa
 
 ## Cloud Autosync toggle
 
-`engram serve` and `engram mcp` support continuous background replication to an Engram Cloud server. This is **opt-in** and never fatal on missing config.
+`intuit-engram serve` and `intuit-engram mcp` support continuous background replication to an Intuit Engram Cloud server. This is **opt-in** and never fatal on missing config.
 
 ### Prerequisites
 
-1. A running Engram Cloud server (see `docker-compose.cloud.yml` or `engram cloud serve`). The server must be a build that includes the mutation endpoints (`POST /sync/mutations/push`, `GET /sync/mutations/pull`). If the server is older, autosync enters `PhaseBackoff` with `reason_code: transport_failed` and logs `server_unsupported` to stderr.
+1. A running Intuit Engram Cloud server (see `docker-compose.cloud.yml` or `intuit-engram cloud serve`). The server must be a build that includes the mutation endpoints (`POST /sync/mutations/push`, `GET /sync/mutations/pull`). If the server is older, autosync enters `PhaseBackoff` with `reason_code: transport_failed` and logs `server_unsupported` to stderr.
 
 2. A valid bearer token configured on the server.
 
@@ -580,9 +582,9 @@ export ENGRAM_CLOUD_AUTOSYNC=1          # exact "1" only
 export ENGRAM_CLOUD_TOKEN=your-token    # bearer token
 export ENGRAM_CLOUD_SERVER=https://cloud.engram.example.com
 
-engram serve
+intuit-engram serve
 # or
-engram mcp
+intuit-engram mcp
 ```
 
 The process logs `[autosync] started (server=...)` on success. Missing token or server URL logs `[autosync] ERROR: ...` and the process starts normally without autosync.

@@ -1,11 +1,11 @@
 ---
-name: engram-memory
-description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to engram proactively. Do NOT wait for the user to ask."
+name: intuit-engram-memory
+description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to intuit-engram proactively. Do NOT wait for the user to ask."
 ---
 
-# Engram Persistent Memory — Protocol
+# Intuit Engram Persistent Memory — Protocol
 
-You have access to Engram, a persistent memory system that survives across sessions and compactions.
+You have access to Intuit Engram, a persistent memory system that survives across sessions and compactions.
 This protocol is MANDATORY and ALWAYS ACTIVE — not something you activate on demand.
 
 ## AVAILABLE TOOLS
@@ -17,10 +17,10 @@ They are available immediately — no manual ToolSearch needed.
 - `mem_get_observation`, `mem_suggest_topic_key`, `mem_update`
 - `mem_session_start`, `mem_session_end`, `mem_save_prompt`
 
-**Fallback**: If tools are unexpectedly unavailable, run `engram setup claude-code`
+**Fallback**: If tools are unexpectedly unavailable, run `intuit-engram setup claude-code`
 again and restart Claude Code. Setup repairs the durable MCP config and
-permissions allowlist for both current (`mcp__engram__...`) and older
-plugin-scoped (`mcp__plugin_engram_engram__...`) server ids.
+permissions allowlist for both current (`mcp__intuit-engram__...`) and older
+plugin-scoped (`mcp__plugin_intuit-engram_intuit-engram__...`) server ids.
 
 Admin tools (deferred — use ToolSearch only if needed):
 - `mem_stats`, `mem_delete`, `mem_timeline`, `mem_capture_passive`
@@ -121,4 +121,4 @@ If you see a message about compaction or context reset:
 3. Only THEN continue working
 
 Do not skip step 1. Without it, everything done before compaction is lost from memory.
-All core tools are loaded automatically by the hook at session start. If they are unexpectedly missing, rerun `engram setup claude-code` and restart Claude Code.
+All core tools are loaded automatically by the hook at session start. If they are unexpectedly missing, rerun `intuit-engram setup claude-code` and restart Claude Code.
