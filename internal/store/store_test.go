@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Gentleman-Programming/engram/internal/product"
 	_ "modernc.org/sqlite"
 )
 
@@ -363,7 +364,7 @@ func TestDifferentTopicsDoNotReplaceEachOther(t *testing.T) {
 
 func TestNewMigratesLegacyObservationIDSchema(t *testing.T) {
 	dataDir := t.TempDir()
-	dbPath := filepath.Join(dataDir, "engram.db")
+	dbPath := filepath.Join(dataDir, product.DBFilename)
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -458,7 +459,7 @@ func TestNewMigratesLegacyObservationIDSchema(t *testing.T) {
 
 func TestNewMigratesLegacyUserPromptsSyncIDSchema(t *testing.T) {
 	dataDir := t.TempDir()
-	dbPath := filepath.Join(dataDir, "engram.db")
+	dbPath := filepath.Join(dataDir, product.DBFilename)
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -3158,8 +3159,8 @@ func TestNewErrorBranches(t *testing.T) {
 	})
 
 	t.Run("fails when db path is a directory", func(t *testing.T) {
-		dataDir := t.TempDir()
-		dbAsDir := filepath.Join(dataDir, "engram.db")
+		dataDir := tempDirWithRetry(t)
+		dbAsDir := filepath.Join(dataDir, product.DBFilename)
 		if err := os.Mkdir(dbAsDir, 0755); err != nil {
 			t.Fatalf("mkdir db path: %v", err)
 		}
@@ -3174,8 +3175,8 @@ func TestNewErrorBranches(t *testing.T) {
 	})
 
 	t.Run("fails when migration encounters conflicting object", func(t *testing.T) {
-		dataDir := t.TempDir()
-		dbPath := filepath.Join(dataDir, "engram.db")
+		dataDir := tempDirWithRetry(t)
+		dbPath := filepath.Join(dataDir, product.DBFilename)
 
 		db, err := sql.Open("sqlite", dbPath)
 		if err != nil {
@@ -4787,7 +4788,7 @@ func TestEnrollProjectBackfillsPromptDeleteTombstonesWithDerivedProject(t *testi
 
 func TestNewRepairsSoftDeletedObservationDeleteMutationsForEnrolledProjects(t *testing.T) {
 	dataDir := t.TempDir()
-	dbPath := filepath.Join(dataDir, "engram.db")
+	dbPath := filepath.Join(dataDir, product.DBFilename)
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -4900,7 +4901,7 @@ func TestNewRepairsSoftDeletedObservationDeleteMutationsForEnrolledProjects(t *t
 
 func TestNewRepairsAlreadyEnrolledProjectsMissingHistoricalSyncMutations(t *testing.T) {
 	dataDir := t.TempDir()
-	dbPath := filepath.Join(dataDir, "engram.db")
+	dbPath := filepath.Join(dataDir, product.DBFilename)
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {

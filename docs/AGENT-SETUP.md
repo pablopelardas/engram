@@ -25,6 +25,28 @@ Intuit Engram works with **any MCP-compatible agent**. Pick your agent below.
 | Windsurf | Manual JSON config | [Details](#windsurf) |
 | Any MCP agent | `intuit-engram mcp` (stdio) | [Details](#any-other-mcp-agent) |
 
+### Author detection
+
+Intuit Engram automatically detects who created each observation. The detection order is:
+
+1. `INTUIT_ENGRAM_AUTHOR` environment variable (e.g., `export INTUIT_ENGRAM_AUTHOR="Juan Pérez <juan@intuit.com>"`)
+2. Git config (`git config user.name` + `git config user.email`)
+3. System user (`USER` or `USERNAME` env var)
+4. Fallback: `"unknown"`
+
+**Override per save:**
+```bash
+intuit-engram save "Title" "Content" --author "Custom Author <custom@example.com>"
+```
+
+### Smart routing (coexistence with engram)
+
+Intuit Engram is designed to coexist with the original `engram` tool:
+- `engram` (port 7437) — for personal/OSS projects
+- `intuit-engram` (port 7438) — for corporate projects with `.intuit-engram/config.json`
+
+Each agent uses the appropriate tool based on the project context. See [Smart Routing](#smart-routing) for details.
+
 ### Project auto-detection (important)
 
 **Do not pass `project` to write tools during normal operation.** Intuit Engram auto-detects the project from the server's working directory (cwd) using `.intuit-engram/config.json`, git remote URL, repo root name, or directory basename. Agents that include `project` in `mem_save` or similar calls will have that argument ignored unless they are using the explicit ambiguous-project recovery flow below.
@@ -33,11 +55,24 @@ To lock write tools to the canonical project for a repo, add `.intuit-engram/con
 
 ```json
 {
-  "project_name": "sias-app"
+  "project_name": "sias-app",
+  "owner_team": "platform-team",
+  "system": "auth-service"
 }
 ```
 
 When present, `project_name` is used for writes from the repo and its subdirectories and overrides lower-confidence cwd/git detection. This is a write lock only: read tools can still use an explicit `project` filter when you need to query another existing project. Empty or invalid `project_name` values fail writes loudly instead of falling back silently.
+
+**Metadata fields** (all optional, can also be set per observation):
+- `owner_team` — team responsible for this project
+- `system` — system or service name
+
+Per-observation metadata (set on each `mem_save`):
+- `status` — `active`, `superseded`, `deprecated`, `resolved`
+- `tags` — comma-separated tags (e.g., `auth, jwt, middleware`)
+- `severity` — `low`, `medium`, `high`, `critical`
+- `audience` — `devs`, `soporte`, `devops`
+- `created_by` — author of the observation (auto-detected if not provided)
 
 **Recommended first call:** `mem_current_project` — confirms which project Intuit Engram detected before you start writing. Returns `project_source` (how it was detected) and `available_projects` (if cwd is ambiguous).
 

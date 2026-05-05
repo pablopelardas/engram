@@ -5813,6 +5813,7 @@ func (s *Store) migrateLegacyObservationsTable() error {
 			tags       TEXT,
 			severity   TEXT,
 			audience   TEXT,
+			created_by TEXT,
 			normalized_hash TEXT,
 			revision_count INTEGER NOT NULL DEFAULT 1,
 			duplicate_count INTEGER NOT NULL DEFAULT 1,
@@ -5829,7 +5830,7 @@ func (s *Store) migrateLegacyObservationsTable() error {
 	if _, err := s.execHook(tx, `
 		INSERT INTO observations_migrated (
 			id, sync_id, session_id, type, title, content, tool_name, project,
-			scope, topic_key, owner_team, system, status, tags, severity, audience,
+			scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 			normalized_hash, revision_count, duplicate_count,
 			last_seen_at, created_at, updated_at, deleted_at
 		)
@@ -5854,6 +5855,7 @@ func (s *Store) migrateLegacyObservationsTable() error {
 			NULLIF(tags, ''),
 			NULLIF(severity, ''),
 			NULLIF(audience, ''),
+			NULL,
 			normalized_hash,
 			CASE WHEN revision_count IS NULL OR revision_count < 1 THEN 1 ELSE revision_count END,
 			CASE WHEN duplicate_count IS NULL OR duplicate_count < 1 THEN 1 ELSE duplicate_count END,

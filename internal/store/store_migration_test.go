@@ -2,12 +2,35 @@ package store
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/Gentleman-Programming/engram/internal/product"
 	_ "modernc.org/sqlite"
 )
+
+// tempDirWithRetry creates a temporary directory and registers a cleanup that
+// retries removal on Windows file-locking errors.
+func tempDirWithRetry(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "engram-migrate-test-*")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() {
+		for i := 0; i < 10; i++ {
+			if err := os.RemoveAll(dir); err == nil {
+				return
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		// Best-effort: if removal fails, leave it for the OS to clean up.
+	})
+	return dir
+}
 
 // legacyObsRow holds the columns that exist in the pre-conflict-surfacing schema.
 // Only the columns that existed in the legacy DDL are captured here.
@@ -31,8 +54,8 @@ type legacyObsRow struct {
 func newTestStoreWithLegacySchema(t *testing.T, fixtureRows []legacyObsRow) *Store {
 	t.Helper()
 
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "engram.db")
+	dir := tempDirWithRetry(t)
+	dbPath := filepath.Join(dir, product.DBFilename)
 
 	// 1. Open raw DB and apply legacy DDL.
 	raw, err := sql.Open("sqlite", dbPath)
@@ -126,10 +149,10 @@ type legacyRelationRow struct {
 func newTestStoreWithLegacySchemaPostP1(t *testing.T, obsRows []legacyObsRow, relRows []legacyRelationRow) *Store {
 	t.Helper()
 
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "engram.db")
+	dir := tempDirWithRetry(t)
+	dbPath := filepath.Join(dir, product.DBFilename)
 
-	// 1. Open raw DB and apply post-Phase-1 DDL.
+	// 1. Open raw DB and apply post-P1 DDL.
 	raw, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("newTestStoreWithLegacySchemaPostP1: open raw db: %v", err)
@@ -315,7 +338,7 @@ func TestMigrate_Idempotent(t *testing.T) {
 	s := newTestStoreWithLegacySchema(t, fixtures)
 	dir := s.cfg.DataDir
 
-	// Close the store so we can re-open it.
+	// Close the store so the file is released before Windows cleanup.
 	if err := s.Close(); err != nil {
 		t.Fatalf("close store before second migration: %v", err)
 	}
@@ -327,7 +350,12 @@ func TestMigrate_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() second run failed: %v — migrate() is not idempotent", err)
 	}
-	t.Cleanup(func() { _ = s2.Close() })
+	// Close immediately so Windows releases the file before t.TempDir cleanup.
+	defer func() {
+		if err := s2.Close(); err != nil {
+			t.Logf("close s2: %v", err)
+		}
+	}()
 
 	// Assert memory_relations still exists after the second run.
 	var tableName string
@@ -726,10 +754,10 @@ func TestMigrate_PostPhase1_PreservesExistingRows(t *testing.T) {
 func newTestStoreWithLegacySchemaPostP2(t *testing.T, relRows []legacyRelationRow) *Store {
 	t.Helper()
 
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "engram.db")
+	dir := tempDirWithRetry(t)
+	dbPath := filepath.Join(dir, product.DBFilename)
 
-	// 1. Open raw DB and apply post-Phase-2 DDL.
+	// 1. Open raw DB and apply post-P2 DDL (memory_relations exists, sync_apply_deferred does not).
 	raw, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("newTestStoreWithLegacySchemaPostP2: open raw db: %v", err)
