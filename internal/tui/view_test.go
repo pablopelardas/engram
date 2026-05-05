@@ -47,6 +47,7 @@ func TestRenderObservationListItem(t *testing.T) {
 		"content line 1\ncontent line 2",
 		"2026-01-01",
 		&project,
+		nil,
 	)
 
 	if !strings.Contains(line, "▸") {

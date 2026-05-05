@@ -975,16 +975,20 @@ func cmdSearch(cfg store.Config) {
 		if r.Project != nil {
 			project = fmt.Sprintf(" | project: %s", *r.Project)
 		}
-		fmt.Printf("[%d] #%d (%s) — %s\n    %s\n    %s%s | scope: %s\n\n",
+		createdBy := ""
+		if r.CreatedBy != nil {
+			createdBy = fmt.Sprintf(" | by: %s", *r.CreatedBy)
+		}
+		fmt.Printf("[%d] #%d (%s) — %s\n    %s\n    %s%s | scope: %s%s\n\n",
 			i+1, r.ID, r.Type, r.Title,
 			truncate(r.Content, 300),
-			r.CreatedAt, project, r.Scope)
+			r.CreatedAt, project, r.Scope, createdBy)
 	}
 }
 
 func cmdSave(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "usage: %s save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY] [--status STATUS] [--tags TAGS] [--severity SEVERITY] [--audience AUDIENCE] [--owner-team OWNER_TEAM] [--system SYSTEM]\n", product.Name)
+		fmt.Fprintf(os.Stderr, "usage: %s save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY] [--status STATUS] [--tags TAGS] [--severity SEVERITY] [--audience AUDIENCE] [--owner-team OWNER_TEAM] [--system SYSTEM] [--author AUTHOR]\n", product.Name)
 		exitFunc(1)
 	}
 
@@ -1000,6 +1004,7 @@ func cmdSave(cfg store.Config) {
 	audience := ""
 	ownerTeam := ""
 	system := ""
+	author := ""
 
 	for i := 4; i < len(os.Args); i++ {
 		switch os.Args[i] {
@@ -1053,6 +1058,11 @@ func cmdSave(cfg store.Config) {
 				system = os.Args[i+1]
 				i++
 			}
+		case "--author":
+			if i+1 < len(os.Args) {
+				author = os.Args[i+1]
+				i++
+			}
 		}
 	}
 
@@ -1081,6 +1091,9 @@ func cmdSave(cfg store.Config) {
 	}
 	if system == "" {
 		system = detRes.System
+	}
+	if author == "" {
+		author = store.DetectAuthor()
 	}
 
 	s, err := storeNew(cfg)
@@ -1111,6 +1124,7 @@ func cmdSave(cfg store.Config) {
 		Audience:  audience,
 		OwnerTeam: ownerTeam,
 		System:    system,
+		CreatedBy: author,
 	})
 	if err != nil {
 		fatal(err)

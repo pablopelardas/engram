@@ -358,6 +358,9 @@ Examples:
 				mcp.WithString("audience",
 					mcp.Description("Audience: devs, soporte, devops"),
 				),
+				mcp.WithString("created_by",
+					mcp.Description("Author of this observation (auto-detected from git config or env var if not provided)"),
+				),
 				mcp.WithString("project",
 					mcp.Description("Optional recovery target only after ambiguous_project. Ignored unless project_choice_reason is user_selected_after_ambiguous_project."),
 				),
@@ -413,6 +416,9 @@ Examples:
 			),
 			mcp.WithString("audience",
 				mcp.Description("New audience: devs, soporte, devops"),
+			),
+			mcp.WithString("created_by",
+				mcp.Description("New author of this observation"),
 			),
 			),
 			queuedWriteHandler(writeQueue, handleUpdate(s)),
@@ -1067,6 +1073,7 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 		audience, _ := req.GetArguments()["audience"].(string)
 		ownerTeam, _ := req.GetArguments()["owner_team"].(string)
 		system, _ := req.GetArguments()["system"].(string)
+		createdBy, _ := req.GetArguments()["created_by"].(string)
 		projectChoice, _ := req.GetArguments()["project"].(string)
 		projectChoiceReason, _ := req.GetArguments()["project_choice_reason"].(string)
 		capturePrompt := boolArg(req, "capture_prompt", true)
@@ -1129,6 +1136,9 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 		if system == "" {
 			system = detRes.System
 		}
+		if createdBy == "" {
+			createdBy = store.DetectAuthor()
+		}
 
 		savedID, err := s.AddObservation(store.AddObservationParams{
 			SessionID: sessionID,
@@ -1144,6 +1154,7 @@ func handleSave(s *store.Store, cfg MCPConfig, activity *SessionActivity) server
 			Audience:  audience,
 			OwnerTeam: ownerTeam,
 			System:    system,
+			CreatedBy: createdBy,
 		})
 		if err != nil {
 			return mcp.NewToolResultError("Failed to save: " + err.Error()), nil
@@ -1303,8 +1314,11 @@ func handleUpdate(s *store.Store) server.ToolHandlerFunc {
 		if v, ok := req.GetArguments()["system"].(string); ok {
 			update.System = &v
 		}
+		if v, ok := req.GetArguments()["created_by"].(string); ok {
+			update.CreatedBy = &v
+		}
 
-		if update.Title == nil && update.Content == nil && update.Type == nil && update.Project == nil && update.Scope == nil && update.TopicKey == nil && update.Status == nil && update.Tags == nil && update.Severity == nil && update.Audience == nil && update.OwnerTeam == nil && update.System == nil {
+		if update.Title == nil && update.Content == nil && update.Type == nil && update.Project == nil && update.Scope == nil && update.TopicKey == nil && update.Status == nil && update.Tags == nil && update.Severity == nil && update.Audience == nil && update.OwnerTeam == nil && update.System == nil && update.CreatedBy == nil {
 			return mcp.NewToolResultError("provide at least one field to update"), nil
 		}
 

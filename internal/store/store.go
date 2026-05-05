@@ -101,6 +101,7 @@ type Observation struct {
 	Tags           *string `json:"tags,omitempty"`
 	Severity       *string `json:"severity,omitempty"`
 	Audience       *string `json:"audience,omitempty"`
+	CreatedBy      *string `json:"created_by,omitempty"`
 	RevisionCount  int     `json:"revision_count"`
 	DuplicateCount int     `json:"duplicate_count"`
 	LastSeenAt     *string `json:"last_seen_at,omitempty"`
@@ -191,6 +192,7 @@ type AddObservationParams struct {
 	Tags      string `json:"tags,omitempty"`
 	Severity  string `json:"severity,omitempty"`
 	Audience  string `json:"audience,omitempty"`
+	CreatedBy string `json:"created_by,omitempty"`
 }
 
 type UpdateObservationParams struct {
@@ -206,6 +208,7 @@ type UpdateObservationParams struct {
 	Tags      *string `json:"tags,omitempty"`
 	Severity  *string `json:"severity,omitempty"`
 	Audience  *string `json:"audience,omitempty"`
+	CreatedBy *string `json:"created_by,omitempty"`
 }
 
 type Prompt struct {
@@ -406,6 +409,7 @@ type syncObservationPayload struct {
 	Tags           *string `json:"tags,omitempty"`
 	Severity       *string `json:"severity,omitempty"`
 	Audience       *string `json:"audience,omitempty"`
+	CreatedBy      *string `json:"created_by,omitempty"`
 	RevisionCount  int     `json:"revision_count"`
 	DuplicateCount int     `json:"duplicate_count"`
 	LastSeenAt     *string `json:"last_seen_at,omitempty"`
@@ -850,6 +854,7 @@ func (s *Store) migrate() error {
 		{name: "tags", definition: "TEXT"},
 		{name: "severity", definition: "TEXT"},
 		{name: "audience", definition: "TEXT"},
+		{name: "created_by", definition: "TEXT"},
 	}
 	for _, c := range observationColumns {
 		if err := s.addColumnIfNotExists("observations", c.name, c.definition); err != nil {
@@ -2002,7 +2007,7 @@ func (s *Store) AllObservations(project, scope string, limit int) ([]Observation
 
 	query := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
 		WHERE o.deleted_at IS NULL
@@ -2032,7 +2037,7 @@ func (s *Store) SessionObservations(sessionID string, limit int) ([]Observation,
 
 	query := `
 		SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		       scope, topic_key, owner_team, system, status, tags, severity, audience,
+		       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 		       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		FROM observations
 		WHERE session_id = ? AND deleted_at IS NULL
@@ -2081,7 +2086,7 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 			).Scan(&existingID)
 			if err == nil {
 				if _, err := s.execHook(tx,
-					`UPDATE observations
+				`UPDATE observations
 					 SET type = ?,
 					     title = ?,
 					     content = ?,
@@ -2094,23 +2099,25 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 					     tags = ?,
 					     severity = ?,
 					     audience = ?,
+					     created_by = ?,
 					     revision_count = revision_count + 1,
 					     last_seen_at = datetime('now'),
 					     updated_at = datetime('now')
 					 WHERE id = ?`,
-					p.Type,
-					title,
-					content,
-					nullableString(p.ToolName),
-					nullableString(topicKey),
-					normHash,
-					nullableString(p.OwnerTeam),
-					nullableString(p.System),
-					nullableString(p.Status),
-					nullableString(p.Tags),
-					nullableString(p.Severity),
-					nullableString(p.Audience),
-					existingID,
+				p.Type,
+				title,
+				content,
+				nullableString(p.ToolName),
+				nullableString(topicKey),
+				normHash,
+				nullableString(p.OwnerTeam),
+				nullableString(p.System),
+				nullableString(p.Status),
+				nullableString(p.Tags),
+				nullableString(p.Severity),
+				nullableString(p.Audience),
+				nullableString(p.CreatedBy),
+				existingID,
 				); err != nil {
 					return err
 				}
@@ -2165,11 +2172,11 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 
 		syncID := newSyncID("obs")
 		res, err := s.execHook(tx,
-			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, revision_count, duplicate_count, last_seen_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
+			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, revision_count, duplicate_count, last_seen_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
 			syncID, p.SessionID, p.Type, title, content,
 			nullableString(p.ToolName), nullableString(p.Project), scope, nullableString(topicKey), normHash,
-			nullableString(p.OwnerTeam), nullableString(p.System), nullableString(p.Status), nullableString(p.Tags), nullableString(p.Severity), nullableString(p.Audience),
+			nullableString(p.OwnerTeam), nullableString(p.System), nullableString(p.Status), nullableString(p.Tags), nullableString(p.Severity), nullableString(p.Audience), nullableString(p.CreatedBy),
 		)
 		if err != nil {
 			return err
@@ -2214,7 +2221,7 @@ func (s *Store) RecentObservations(project, scope string, limit int) ([]Observat
 
 	query := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
 		WHERE o.deleted_at IS NULL
@@ -2544,7 +2551,7 @@ func (s *Store) DeletePrompt(id int64) error {
 func (s *Store) GetObservation(id int64) (*Observation, error) {
 	row := s.db.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE id = ? AND deleted_at IS NULL`, id,
 	)
@@ -2552,7 +2559,7 @@ func (s *Store) GetObservation(id int64) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -2621,6 +2628,10 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 		if p.Audience != nil {
 			audience = *p.Audience
 		}
+		createdBy := derefString(obs.CreatedBy)
+		if p.CreatedBy != nil {
+			createdBy = *p.CreatedBy
+		}
 
 		// Validate type against closed taxonomy if changing
 		if p.Type != nil && typ != "" && !IsAllowedType(typ) {
@@ -2642,6 +2653,7 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			     tags = ?,
 			     severity = ?,
 			     audience = ?,
+			     created_by = ?,
 			     revision_count = revision_count + 1,
 			     updated_at = datetime('now')
 			 WHERE id = ? AND deleted_at IS NULL`,
@@ -2658,6 +2670,7 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			nullableString(tags),
 			nullableString(severity),
 			nullableString(audience),
+			nullableString(createdBy),
 			id,
 		); err != nil {
 			return err
@@ -2862,7 +2875,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 	if strings.Contains(query, "/") {
 		tkSQL := `
 			SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-			       scope, topic_key, owner_team, system, status, tags, severity, audience,
+			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 			       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 			FROM observations
 			WHERE topic_key = ? AND deleted_at IS NULL
@@ -2917,7 +2930,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 				if err := tkRows.Scan(
 					&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
 					&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
-					&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience,
+					&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy,
 					&sr.RevisionCount, &sr.DuplicateCount,
 					&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
 				); err != nil {
@@ -2934,7 +2947,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 
 	sqlQ := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at,
 		       fts.rank
 		FROM observations_fts fts
@@ -3004,7 +3017,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 		if err := rows.Scan(
 			&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
 			&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
-			&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience,
+			&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy,
 			&sr.RevisionCount, &sr.DuplicateCount,
 			&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
 			&sr.Rank,
@@ -3201,7 +3214,7 @@ func (s *Store) exportWithProjectScope(project string) (*ExportData, error) {
 
 	// Observations
 	obsQuery := `SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-	        scope, topic_key, owner_team, system, status, tags, severity, audience,
+	        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 	        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 	 FROM observations`
 	obsArgs := []any{}
@@ -3222,7 +3235,7 @@ func (s *Store) exportWithProjectScope(project string) (*ExportData, error) {
 		if err := obsRows.Scan(
 			&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 			&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 			&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 			&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 		); err != nil {
@@ -4039,7 +4052,7 @@ func (s *Store) ApplyPulledChunk(targetKey, chunkID string, mutations []SyncMuta
 func (s *Store) GetObservationBySyncID(syncID string) (*Observation, error) {
 	row := s.db.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE sync_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`,
 		syncID,
@@ -4048,7 +4061,7 @@ func (s *Store) GetObservationBySyncID(syncID string) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5288,7 +5301,7 @@ func decodeSyncPayload(payload []byte, dest any) error {
 func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 	row := tx.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE id = ? AND deleted_at IS NULL`, id,
 	)
@@ -5296,7 +5309,7 @@ func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5307,7 +5320,7 @@ func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 
 func (s *Store) getObservationBySyncIDTx(tx *sql.Tx, syncID string, includeDeleted bool) (*Observation, error) {
 	query := `SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE sync_id = ?`
 	if !includeDeleted {
@@ -5319,7 +5332,7 @@ func (s *Store) getObservationBySyncIDTx(tx *sql.Tx, syncID string, includeDelet
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5345,6 +5358,7 @@ func observationPayloadFromObservation(obs *Observation) syncObservationPayload 
 		Tags:           obs.Tags,
 		Severity:       obs.Severity,
 		Audience:       obs.Audience,
+		CreatedBy:      obs.CreatedBy,
 		RevisionCount:  obs.RevisionCount,
 		DuplicateCount: obs.DuplicateCount,
 		LastSeenAt:     obs.LastSeenAt,
@@ -5408,8 +5422,8 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 	existing, err := s.getObservationBySyncIDTx(tx, payload.SyncID, true)
 	if err == sql.ErrNoRows {
 		_, err = s.execHook(tx,
-			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 			payload.SyncID,
 			payload.SessionID,
 			payload.Type,
@@ -5426,6 +5440,7 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 			payload.Tags,
 			payload.Severity,
 			payload.Audience,
+			payload.CreatedBy,
 			revisionCount,
 			duplicateCount,
 			payload.LastSeenAt,
@@ -5456,7 +5471,7 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 
 	_, err = s.execHook(tx,
 		`UPDATE observations
-		 SET session_id = ?, type = ?, title = ?, content = ?, tool_name = ?, project = ?, scope = ?, topic_key = ?, normalized_hash = ?, owner_team = ?, system = ?, status = ?, tags = ?, severity = ?, audience = ?, revision_count = ?, duplicate_count = ?, last_seen_at = ?, created_at = ?, updated_at = ?, deleted_at = NULL
+		 SET session_id = ?, type = ?, title = ?, content = ?, tool_name = ?, project = ?, scope = ?, topic_key = ?, normalized_hash = ?, owner_team = ?, system = ?, status = ?, tags = ?, severity = ?, audience = ?, created_by = ?, revision_count = ?, duplicate_count = ?, last_seen_at = ?, created_at = ?, updated_at = ?, deleted_at = NULL
 		 WHERE id = ?`,
 		payload.SessionID,
 		payload.Type,
@@ -5473,6 +5488,7 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 		payload.Tags,
 		payload.Severity,
 		payload.Audience,
+		payload.CreatedBy,
 		revisionCount,
 		duplicateCount,
 		payload.LastSeenAt,
@@ -5606,7 +5622,7 @@ func (s *Store) queryObservations(query string, args ...any) ([]Observation, err
 		if err := rows.Scan(
 			&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 			&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience,
+			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy,
 			&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 			&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 		); err != nil {

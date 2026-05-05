@@ -278,6 +278,7 @@ export const Engram: Plugin = async (ctx) => {
 
   // Try to start Intuit Engram server if not running
   const running = await isEngramRunning()
+  let serverWarning = ""
   if (!running) {
     try {
       Bun.spawn([ENGRAM_BIN, "serve"], {
@@ -287,7 +288,10 @@ export const Engram: Plugin = async (ctx) => {
       })
       await new Promise((r) => setTimeout(r, 500))
     } catch {
-      // Binary not found or can't start — plugin will silently no-op
+      serverWarning = `⚠️ WARNING: Intuit Engram HTTP server is not running on ${ENGRAM_URL}. ` +
+        `Session tracking, metrics, and status line are disabled. ` +
+        `MCP memory tools (mem_save, mem_search) still work. ` +
+        `To enable full functionality, run: ${ENGRAM_BIN} serve &`
     }
   }
 
@@ -448,10 +452,13 @@ export const Engram: Plugin = async (ctx) => {
     // messages that would break these models. See: GitHub issue #23.
 
     "experimental.chat.system.transform": async (_input, output) => {
+      const instructions = serverWarning
+        ? MEMORY_INSTRUCTIONS + "\n\n" + serverWarning
+        : MEMORY_INSTRUCTIONS
       if (output.system.length > 0) {
-        output.system[output.system.length - 1] += "\n\n" + MEMORY_INSTRUCTIONS
+        output.system[output.system.length - 1] += "\n\n" + instructions
       } else {
-        output.system.push(MEMORY_INSTRUCTIONS)
+        output.system.push(instructions)
       }
     },
 
