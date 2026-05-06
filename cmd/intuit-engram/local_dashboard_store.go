@@ -75,7 +75,10 @@ func (lds *localDashboardStore) ListRecentSessions(project, query string, limit 
 }
 
 func (lds *localDashboardStore) ListRecentObservations(project, query string, limit int) ([]cloudstore.DashboardObservationRow, error) {
-	obs, err := lds.s.RecentObservations("", "", limit)
+	// The curation dashboard needs to surface drafts and deprecated rows so users
+	// can promote/deprecate them. RecentObservations filters those out (it's tuned
+	// for agent context retrieval), so use the all-statuses variant here.
+	obs, err := lds.s.RecentObservationsAllStatuses("", "", limit)
 	if err != nil {
 		return nil, err
 	}

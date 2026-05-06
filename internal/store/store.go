@@ -2249,6 +2249,18 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 }
 
 func (s *Store) RecentObservations(project, scope string, limit int) ([]Observation, error) {
+	return s.recentObservations(project, scope, limit, true)
+}
+
+// RecentObservationsAllStatuses returns recent observations regardless of canonical_status.
+// Use this for curation surfaces (the dashboard) that need to show drafts and deprecated rows
+// alongside reviewed/canonical ones. Agent-context callers should keep using RecentObservations
+// to avoid leaking unreviewed material into the model.
+func (s *Store) RecentObservationsAllStatuses(project, scope string, limit int) ([]Observation, error) {
+	return s.recentObservations(project, scope, limit, false)
+}
+
+func (s *Store) recentObservations(project, scope string, limit int, canonicalOnly bool) ([]Observation, error) {
 	// Normalize project filter for case-insensitive matching
 	project, _ = NormalizeProject(project)
 
@@ -2263,8 +2275,10 @@ func (s *Store) RecentObservations(project, scope string, limit int) ([]Observat
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
 		WHERE o.deleted_at IS NULL
-		  AND o.canonical_status IN ('reviewed', 'canonical')
 	`
+	if canonicalOnly {
+		query += " AND o.canonical_status IN ('reviewed', 'canonical')"
+	}
 	args := []any{}
 
 	if project != "" {
