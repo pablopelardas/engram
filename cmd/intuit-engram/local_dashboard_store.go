@@ -205,7 +205,68 @@ func (lds *localDashboardStore) GetSessionDetail(project, sessionID string) (clo
 }
 
 func (lds *localDashboardStore) GetObservationDetail(project, sessionID, syncID string) (cloudstore.DashboardObservationRow, cloudstore.DashboardSessionRow, []cloudstore.DashboardObservationRow, error) {
-	return cloudstore.DashboardObservationRow{}, cloudstore.DashboardSessionRow{}, nil, fmt.Errorf("not implemented")
+	// Find observation by syncID
+	obs, err := lds.s.GetObservationBySyncID(syncID)
+	if err != nil {
+		return cloudstore.DashboardObservationRow{}, cloudstore.DashboardSessionRow{}, nil, err
+	}
+
+	obsProject := ""
+	if obs.Project != nil {
+		obsProject = *obs.Project
+	}
+
+	row := cloudstore.DashboardObservationRow{
+		Project:         obsProject,
+		SessionID:       obs.SessionID,
+		SyncID:          obs.SyncID,
+		Type:            obs.Type,
+		Title:           obs.Title,
+		Content:         obs.Content,
+		CreatedAt:       obs.CreatedAt,
+		CanonicalStatus: obs.CanonicalStatus,
+	}
+
+	// Get session info
+	sess, err := lds.s.GetSession(obs.SessionID)
+	if err != nil {
+		return row, cloudstore.DashboardSessionRow{}, nil, nil
+	}
+
+	sessionRow := cloudstore.DashboardSessionRow{
+		Project:   obsProject,
+		SessionID: sess.ID,
+		StartedAt: sess.StartedAt,
+	}
+
+	// Get related observations from same session
+	related, err := lds.s.SessionObservations(obs.SessionID, 50)
+	if err != nil {
+		return row, sessionRow, nil, nil
+	}
+
+	relatedRows := make([]cloudstore.DashboardObservationRow, 0, len(related))
+	for _, o := range related {
+		if o.SyncID == syncID {
+			continue // skip self
+		}
+		proj := ""
+		if o.Project != nil {
+			proj = *o.Project
+		}
+		relatedRows = append(relatedRows, cloudstore.DashboardObservationRow{
+			Project:         proj,
+			SessionID:       o.SessionID,
+			SyncID:          o.SyncID,
+			Type:            o.Type,
+			Title:           o.Title,
+			Content:         o.Content,
+			CreatedAt:       o.CreatedAt,
+			CanonicalStatus: o.CanonicalStatus,
+		})
+	}
+
+	return row, sessionRow, relatedRows, nil
 }
 
 func (lds *localDashboardStore) GetPromptDetail(project, sessionID, syncID string) (cloudstore.DashboardPromptRow, cloudstore.DashboardSessionRow, []cloudstore.DashboardPromptRow, error) {
