@@ -668,6 +668,59 @@ func (cs *CloudStore) migrate(ctx context.Context) error {
 		`CREATE INDEX IF NOT EXISTS idx_audit_log_occurred_at ON cloud_sync_audit_log (occurred_at DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_audit_log_contributor_project ON cloud_sync_audit_log (contributor, project)`,
 		`CREATE INDEX IF NOT EXISTS idx_audit_log_outcome ON cloud_sync_audit_log (outcome)`,
+
+		// ── IntuitHub integration: extend cloud_users with collaborator metadata.
+		// Source of truth lives in IntuitHub; these columns are a cache hydrated
+		// by the periodic sync job + lazy hydration in the auth middleware.
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS intuit_collaborator_id INTEGER`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS full_name TEXT`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS role TEXT`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS team_codes_json JSONB NOT NULL DEFAULT '[]'::jsonb`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS memberships_json JSONB NOT NULL DEFAULT '[]'::jsonb`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS has_full_visibility BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS cached_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`ALTER TABLE cloud_users ADD COLUMN IF NOT EXISTS api_key_hash TEXT`,
+		// Drop the legacy partial unique index if it exists. Partial indexes
+		// can't be referenced by a plain ON CONFLICT (col) clause, so we
+		// replace it with a constraint-backed unique index that allows
+		// multiple NULLs (Postgres default for UNIQUE).
+		`DROP INDEX IF EXISTS idx_cloud_users_intuit_collab`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint
+				WHERE conname = 'cloud_users_intuit_collab_uq' AND conrelid = 'cloud_users'::regclass
+			) THEN
+				ALTER TABLE cloud_users
+					ADD CONSTRAINT cloud_users_intuit_collab_uq UNIQUE (intuit_collaborator_id);
+			END IF;
+		END $$`,
+		`CREATE INDEX IF NOT EXISTS idx_cloud_users_api_key_hash ON cloud_users (api_key_hash) WHERE api_key_hash IS NOT NULL`,
+
+		// app_team_ownership: mirror of IntuitHub.TeamApplications. M:N between apps and teams.
+		// application_name = IntuitHub.Applications.ApplicationName
+		// team_code = IntuitHub.Teams.TeamCode
+		`CREATE TABLE IF NOT EXISTS app_team_ownership (
+			application_name TEXT NOT NULL,
+			team_code        TEXT NOT NULL,
+			role             TEXT,
+			synced_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (application_name, team_code)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_app_team_ownership_team ON app_team_ownership (team_code)`,
+		`CREATE INDEX IF NOT EXISTS idx_app_team_ownership_app ON app_team_ownership (application_name)`,
+
+		// intuithub_sync_state: singleton row tracking last sync run.
+		`CREATE TABLE IF NOT EXISTS intuithub_sync_state (
+			id                    INTEGER PRIMARY KEY DEFAULT 1,
+			last_sync_at          TIMESTAMPTZ,
+			last_sync_status      TEXT,
+			last_sync_error       TEXT,
+			teams_synced          INTEGER,
+			collaborators_synced  INTEGER,
+			ownerships_synced     INTEGER,
+			CONSTRAINT intuithub_sync_state_singleton CHECK (id = 1)
+		)`,
+		`INSERT INTO intuithub_sync_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
 	}
 	for _, q := range queries {
 		if _, err := cs.db.ExecContext(ctx, q); err != nil {

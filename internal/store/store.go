@@ -876,6 +876,7 @@ func (s *Store) migrate() error {
 		{name: "severity", definition: "TEXT"},
 		{name: "audience", definition: "TEXT"},
 		{name: "created_by", definition: "TEXT"},
+		{name: "created_by_collab_id", definition: "INTEGER"},
 		{name: "canonical_status", definition: "TEXT NOT NULL DEFAULT 'draft'"},
 		{name: "reviewed_at", definition: "TEXT"},
 		{name: "reviewed_by", definition: "TEXT"},
