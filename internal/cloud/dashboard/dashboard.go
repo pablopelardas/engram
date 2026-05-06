@@ -16,6 +16,7 @@ import (
 
 	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
 	"github.com/Gentleman-Programming/engram/internal/cloud/constants"
+	"github.com/Gentleman-Programming/engram/internal/store"
 	"github.com/a-h/templ"
 )
 
@@ -48,6 +49,15 @@ type MountConfig struct {
 	Store               DashboardStore
 	MaxLoginBodyBytes   int64
 	StatusProvider      SyncStatusProvider
+	// LocalStore is an optional local SQLite store for curation actions (promote/deprecate).
+	// When set, POST /dashboard/curation/.../promote and /deprecate will mutate observations.
+	LocalStore LocalCurationStore
+}
+
+// LocalCurationStore provides write access for curation actions.
+type LocalCurationStore interface {
+	GetObservationBySyncID(syncID string) (*store.Observation, error)
+	UpdateObservation(id int64, p store.UpdateObservationParams) (*store.Observation, error)
 }
 
 type DashboardStore interface {
@@ -155,6 +165,8 @@ func Mount(mux *http.ServeMux, cfg MountConfig) {
 	mux.HandleFunc("GET /dashboard/curation/pending", h.requireSession(h.handleCurationPending))
 	mux.HandleFunc("GET /dashboard/curation/canonical", h.requireSession(h.handleCurationCanonical))
 	mux.HandleFunc("GET /dashboard/curation/deprecated", h.requireSession(h.handleCurationDeprecated))
+	mux.HandleFunc("POST /dashboard/curation/{project}/{sessionID}/{syncID}/promote", h.requireSession(h.handleCurationPromote))
+	mux.HandleFunc("POST /dashboard/curation/{project}/{sessionID}/{syncID}/deprecate", h.requireSession(h.handleCurationDeprecate))
 }
 
 func Handler() http.Handler {
@@ -968,7 +980,7 @@ func (h *handlers) handleObservationDetail(w http.ResponseWriter, r *http.Reques
 		sess = &s
 		related = rel
 	}
-	component := ObservationDetailPage(obs, sess, related)
+	component := ObservationDetailPage(obs, sess, related, true)
 	renderComponent(w, r, Layout("Observation Detail", p.DisplayName(), "browser", p.IsAdmin(), component))
 }
 
@@ -1339,4 +1351,46 @@ func (h *handlers) handleCurationStatus(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	renderComponent(w, r, Layout(title, p.DisplayName(), "curation", p.IsAdmin(), CurationStatusPage(status, title, project, query, partial)))
+}
+
+func (h *handlers) handleCurationPromote(w http.ResponseWriter, r *http.Request) {
+	h.handleCurationAction(w, r, "canonical", "Promoted to canonical")
+}
+
+func (h *handlers) handleCurationDeprecate(w http.ResponseWriter, r *http.Request) {
+	h.handleCurationAction(w, r, "deprecated", "Deprecated")
+}
+
+func (h *handlers) handleCurationAction(w http.ResponseWriter, r *http.Request, newStatus, actionLabel string) {
+	if h.cfg.LocalStore == nil {
+		h.renderStoreError(w, r, "curation", "Curation", fmt.Errorf("local store not configured for curation actions"))
+		return
+	}
+
+	syncID := r.PathValue("syncID")
+	if syncID == "" {
+		http.Error(w, "missing sync_id", http.StatusBadRequest)
+		return
+	}
+
+	obs, err := h.cfg.LocalStore.GetObservationBySyncID(syncID)
+	if err != nil {
+		h.renderStoreError(w, r, "curation", "Curation", err)
+		return
+	}
+
+	canonicalStatus := newStatus
+	_, err = h.cfg.LocalStore.UpdateObservation(obs.ID, store.UpdateObservationParams{
+		CanonicalStatus: &canonicalStatus,
+	})
+	if err != nil {
+		h.renderStoreError(w, r, "curation", "Curation", err)
+		return
+	}
+
+	// Redirect back to the observation detail page
+	http.Redirect(w, r, fmt.Sprintf("/dashboard/observations/%s/%s/%s",
+		url.PathEscape(r.PathValue("project")),
+		url.PathEscape(r.PathValue("sessionID")),
+		url.PathEscape(syncID)), http.StatusSeeOther)
 }

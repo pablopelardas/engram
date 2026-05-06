@@ -328,6 +328,19 @@ func (a serverSyncStatusAdapter) Status() dashboard.SyncStatus {
 	}
 }
 
+// localCurationStore adapts localDashboardStore for curation write operations.
+type localCurationStore struct {
+	lds *localDashboardStore
+}
+
+func (lcs *localCurationStore) GetObservationBySyncID(syncID string) (*store.Observation, error) {
+	return lcs.lds.s.GetObservationBySyncID(syncID)
+}
+
+func (lcs *localCurationStore) UpdateObservation(id int64, p store.UpdateObservationParams) (*store.Observation, error) {
+	return lcs.lds.s.UpdateObservation(id, p)
+}
+
 var _ interface {
 	ListProjects(query string) ([]cloudstore.DashboardProjectRow, error)
 	ProjectDetail(project string) (cloudstore.DashboardProjectDetail, error)

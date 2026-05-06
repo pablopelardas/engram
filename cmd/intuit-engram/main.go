@@ -801,6 +801,7 @@ func cmdServe(cfg store.Config) {
 		Store:               localDashStore,
 		MaxLoginBodyBytes:   4096,
 		StatusProvider:      serverSyncStatusAdapter{fallback: fallback},
+		LocalStore:          &localCurationStore{lds: localDashStore},
 	})
 
 	if err := startHTTP(srv); err != nil {

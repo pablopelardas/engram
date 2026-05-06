@@ -1088,7 +1088,7 @@ templ SessionDetailPage(session *cloudstore.DashboardSessionRow, observations []
 
 // ObservationDetailPage renders the full observation payload with session context.
 // ADAPTED: CloudObservation -> DashboardObservationRow; CloudSession -> DashboardSessionRow.
-templ ObservationDetailPage(observation *cloudstore.DashboardObservationRow, session *cloudstore.DashboardSessionRow, related []cloudstore.DashboardObservationRow) {
+templ ObservationDetailPage(observation *cloudstore.DashboardObservationRow, session *cloudstore.DashboardSessionRow, related []cloudstore.DashboardObservationRow, showActions bool) {
 	<section class="frame-section">
 		<div class="section-header">
 			<div>
@@ -1105,8 +1105,23 @@ templ ObservationDetailPage(observation *cloudstore.DashboardObservationRow, ses
 		} else {
 			<div class="project-chip-list">
 				@StatusBadge(observation.Type, typeBadgeVariant(observation.Type))
+				@StatusBadge(observation.CanonicalStatus, canonicalStatusBadgeVariant(observation.CanonicalStatus))
 				@StatusBadge(observation.Project, "muted")
 			</div>
+			// Curation actions
+			if showActions && observation.CanonicalStatus == "draft" {
+				<div class="curation-actions" style="margin: 1rem 0; padding: 1rem; background: #1f1d2e; border-radius: 8px;">
+					<p class="section-kicker" style="margin-bottom: 0.5rem;">CURATION ACTIONS</p>
+					<div style="display: flex; gap: 1rem;">
+						<form method="post" action={ templ.SafeURL(fmt.Sprintf("/dashboard/curation/%s/%s/%s/promote", url.PathEscape(observation.Project), url.PathEscape(observation.SessionID), url.PathEscape(observation.SyncID))) } style="margin:0">
+							<button type="submit" class="button-primary" style="background: #31748f; border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Promote to Canonical</button>
+						</form>
+						<form method="post" action={ templ.SafeURL(fmt.Sprintf("/dashboard/curation/%s/%s/%s/deprecate", url.PathEscape(observation.Project), url.PathEscape(observation.SessionID), url.PathEscape(observation.SyncID))) } style="margin:0">
+							<button type="submit" class="button-danger" style="background: #eb6f92; border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Deprecate</button>
+						</form>
+					</div>
+				</div>
+			}
 			<div class="data-frame observation-detail-body">
 				<table>
 					<tbody>
