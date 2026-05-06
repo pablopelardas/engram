@@ -597,6 +597,10 @@ func cloudSyncFailureMessage(project string, syncErr error) string {
 }
 
 func main() {
+	// Load intuit-engram.env (if present) before reading any env var.
+	// File values do NOT override env vars already set by the shell.
+	loadEnvFile()
+
 	if len(os.Args) < 2 {
 		printUsage()
 		exitFunc(1)

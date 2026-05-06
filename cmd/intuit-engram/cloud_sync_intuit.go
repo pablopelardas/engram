@@ -19,10 +19,12 @@ func cmdCloudSync() {
 		fmt.Printf("usage: %s cloud sync <provider>\n", product.Name)
 		fmt.Println("supported providers: intuit")
 		fmt.Println("")
-		fmt.Println("Required env vars:")
+		fmt.Println("Required env vars (or values in intuit-engram.env next to the binary):")
 		fmt.Printf("  %s     IntuitHub-API base URL (e.g. https://devserver01.intuit.ar/intuit-hub-api/)\n", product.EnvIntuitHubBaseURL)
 		fmt.Printf("  %s    Admin X-API-Key for the engram-cloud-sync collaborator\n", product.EnvIntuitHubAdminKey)
 		fmt.Printf("  %s          Postgres DSN for engram cloud DB\n", product.EnvDatabaseURL)
+		fmt.Println("")
+		fmt.Println("See intuit-engram.env.example for a template.")
 		return
 	}
 

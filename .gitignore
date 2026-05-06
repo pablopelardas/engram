@@ -10,6 +10,10 @@
 # Export files
 engram-export.json
 
+# Local env files (template is intuit-engram.env.example, kept in git)
+intuit-engram.env
+.env
+
 # OS
 .DS_Store
 Thumbs.db
