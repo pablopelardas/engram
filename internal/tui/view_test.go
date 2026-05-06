@@ -46,6 +46,7 @@ func TestRenderObservationListItem(t *testing.T) {
 		"Title here",
 		"content line 1\ncontent line 2",
 		"2026-01-01",
+		"draft",
 		&project,
 		nil,
 	)

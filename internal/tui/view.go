@@ -217,7 +217,7 @@ func (m Model) viewSearchResults() string {
 
 	for i := m.Scroll; i < end; i++ {
 		r := m.SearchResults[i]
-		b.WriteString(m.renderObservationListItem(i, r.ID, r.Type, r.Title, r.Content, r.CreatedAt, r.Project, r.CreatedBy))
+		b.WriteString(m.renderObservationListItem(i, r.ID, r.Type, r.Title, r.Content, r.CreatedAt, r.CanonicalStatus, r.Project, r.CreatedBy))
 	}
 
 	// Scroll indicator
@@ -260,7 +260,7 @@ func (m Model) viewRecent() string {
 
 	for i := m.Scroll; i < end; i++ {
 		o := m.RecentObservations[i]
-		b.WriteString(m.renderObservationListItem(i, o.ID, o.Type, o.Title, o.Content, o.CreatedAt, o.Project, o.CreatedBy))
+		b.WriteString(m.renderObservationListItem(i, o.ID, o.Type, o.Title, o.Content, o.CreatedAt, o.CanonicalStatus, o.Project, o.CreatedBy))
 	}
 
 	if count > visibleItems {
@@ -295,6 +295,26 @@ func (m Model) viewObservationDetail() string {
 	b.WriteString(fmt.Sprintf("%s %s\n",
 		detailLabelStyle.Render("Type:"),
 		typeBadgeStyle.Render(obs.Type)))
+
+	// Canonical status
+	statusStr := obs.CanonicalStatus
+	if statusStr == "" {
+		statusStr = "draft"
+	}
+	var statusBadge string
+	switch statusStr {
+	case "draft":
+		statusBadge = draftBadgeStyle.Render(statusStr)
+	case "reviewed":
+		statusBadge = reviewedBadgeStyle.Render(statusStr)
+	case "canonical":
+		statusBadge = canonicalBadgeStyle.Render(statusStr)
+	case "deprecated":
+		statusBadge = deprecatedBadgeStyle.Render(statusStr)
+	}
+	b.WriteString(fmt.Sprintf("%s %s\n",
+		detailLabelStyle.Render("Status:"),
+		statusBadge))
 
 	b.WriteString(fmt.Sprintf("%s %s\n",
 		detailLabelStyle.Render("Title:"),
@@ -551,7 +571,7 @@ func (m Model) viewSessionDetail() string {
 
 	for i := m.SessionDetailScroll; i < end; i++ {
 		o := m.SessionObservations[i]
-		b.WriteString(m.renderObservationListItem(i, o.ID, o.Type, o.Title, o.Content, o.CreatedAt, o.Project, o.CreatedBy))
+		b.WriteString(m.renderObservationListItem(i, o.ID, o.Type, o.Title, o.Content, o.CreatedAt, o.CanonicalStatus, o.Project, o.CreatedBy))
 	}
 
 	if count > visibleItems {
@@ -685,7 +705,7 @@ func (m Model) viewSetup() string {
 
 // ─── Shared Renderers ────────────────────────────────────────────────────────
 
-func (m Model) renderObservationListItem(index int, id int64, obsType, title, content, createdAt string, project, createdBy *string) string {
+func (m Model) renderObservationListItem(index int, id int64, obsType, title, content, createdAt, canonicalStatus string, project, createdBy *string) string {
 	cursor := "  "
 	style := listItemStyle
 	if index == m.Cursor {
@@ -703,11 +723,28 @@ func (m Model) renderObservationListItem(index int, id int64, obsType, title, co
 		author = "  " + detailValueStyle.Render(*createdBy)
 	}
 
-	line := fmt.Sprintf("%s%s %s %s%s  %s%s\n",
+	// Canonical status badge
+	statusBadge := ""
+	switch canonicalStatus {
+	case "draft":
+		statusBadge = draftBadgeStyle.Render("[draft]")
+	case "reviewed":
+		statusBadge = reviewedBadgeStyle.Render("[reviewed]")
+	case "canonical":
+		statusBadge = canonicalBadgeStyle.Render("[canonical]")
+	case "deprecated":
+		statusBadge = deprecatedBadgeStyle.Render("[deprecated]")
+	}
+	if statusBadge != "" {
+		statusBadge = " " + statusBadge
+	}
+
+	line := fmt.Sprintf("%s%s %s%s %s%s  %s%s\n",
 		cursor,
 		idStyle.Render(fmt.Sprintf("#%-5d", id)),
 		typeBadgeStyle.Render(fmt.Sprintf("[%-12s]", obsType)),
 		style.Render(truncateStr(title, 50)),
+		statusBadge,
 		proj,
 		timestampStyle.Render(localTime(createdAt)),
 		author)

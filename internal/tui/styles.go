@@ -132,6 +132,23 @@ var (
 	contentPreviewStyle = lipgloss.NewStyle().
 				Foreground(colorSubtext).
 				PaddingLeft(4)
+
+	// Canonical status badges
+	draftBadgeStyle = lipgloss.NewStyle().
+				Foreground(colorSubtext).
+				Italic(true)
+
+	reviewedBadgeStyle = lipgloss.NewStyle().
+				Foreground(colorGreen).
+				Bold(true)
+
+	canonicalBadgeStyle = lipgloss.NewStyle().
+				Foreground(colorBlue).
+				Bold(true)
+
+	deprecatedBadgeStyle = lipgloss.NewStyle().
+				Foreground(colorRed).
+				Bold(true)
 )
 
 // ─── Detail View Styles ──────────────────────────────────────────────────────
