@@ -652,6 +652,51 @@ func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 	}
 }
 
+func TestHandleSearchEmptyAndStarListAllMatchingMemories(t *testing.T) {
+	s := newMCPTestStore(t)
+	if err := s.CreateSession("s-mcp", "engram", "/tmp/engram"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	for _, title := range []string{"Auth strategy", "Parser panic"} {
+		obsID, err := s.AddObservation(store.AddObservationParams{
+			SessionID: "s-mcp",
+			Type:      "decision",
+			Title:     title,
+			Content:   "MCP search list-all test content",
+			Project:   "engram",
+			Scope:     "project",
+		})
+		if err != nil {
+			t.Fatalf("add observation: %v", err)
+		}
+		mustPromoteToCanonical(t, s, obsID)
+	}
+
+	search := handleSearch(s, MCPConfig{}, NewSessionActivity(10*time.Minute))
+	for _, query := range []string{"", "*"} {
+		t.Run(fmt.Sprintf("query=%q", query), func(t *testing.T) {
+			searchReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
+				"query":   query,
+				"project": "engram",
+				"scope":   "project",
+				"limit":   5.0,
+			}}}
+			searchRes, err := search(context.Background(), searchReq)
+			if err != nil {
+				t.Fatalf("search handler error: %v", err)
+			}
+			if searchRes.IsError {
+				t.Fatalf("unexpected search error: %s", callResultText(t, searchRes))
+			}
+			text := callResultText(t, searchRes)
+			if !strings.Contains(text, "Found 2 memories") {
+				t.Fatalf("expected list-all search result, got: %s", text)
+			}
+		})
+	}
+}
+
 func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 	s := newMCPTestStore(t)
 	if err := s.CreateSession("s-flow", "engram", "/tmp/engram"); err != nil {

@@ -41,6 +41,16 @@ func newTestStore(t *testing.T) *Store {
 	return s
 }
 
+// mustPromoteToCanonical updates an observation's canonical_status to 'canonical'.
+// Use in tests that need observations to be visible to agents via RecentObservations.
+func mustPromoteToCanonical(t *testing.T, s *Store, id int64) {
+	t.Helper()
+	canonical := "canonical"
+	if _, err := s.UpdateObservation(id, UpdateObservationParams{CanonicalStatus: &canonical}); err != nil {
+		t.Fatalf("promote to canonical: %v", err)
+	}
+}
+
 type fakeRows struct {
 	next     []bool
 	scanErr  error
@@ -122,7 +132,7 @@ func TestScopeFiltersSearchAndContext(t *testing.T) {
 		t.Fatalf("create session: %v", err)
 	}
 
-	_, err := s.AddObservation(AddObservationParams{
+	id1, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
 		Type:      "decision",
 		Title:     "Project auth",
@@ -133,8 +143,9 @@ func TestScopeFiltersSearchAndContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add project observation: %v", err)
 	}
+	mustPromoteToCanonical(t, s, id1)
 
-	_, err = s.AddObservation(AddObservationParams{
+	id2, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
 		Type:      "decision",
 		Title:     "Personal note",
@@ -145,6 +156,7 @@ func TestScopeFiltersSearchAndContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add personal observation: %v", err)
 	}
+	mustPromoteToCanonical(t, s, id2)
 
 	projectResults, err := s.Search("regex", SearchOptions{Project: "engram", Scope: "project", Limit: 10})
 	if err != nil {
@@ -171,6 +183,68 @@ func TestScopeFiltersSearchAndContext(t *testing.T) {
 	}
 	if strings.Contains(ctx, "Project auth") {
 		t.Fatalf("expected personal context to exclude project observation")
+	}
+}
+
+func TestSearchEmptyAndStarListAllMatchingObservations(t *testing.T) {
+	s := newTestStore(t)
+
+	if err := s.CreateSession("s1", "engram", "/tmp/engram"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	firstID, err := s.AddObservation(AddObservationParams{
+		SessionID: "s1",
+		Type:      "decision",
+		Title:     "Auth strategy",
+		Content:   "Use cookie sessions",
+		Project:   "engram",
+		Scope:     "project",
+	})
+	if err != nil {
+		t.Fatalf("add first observation: %v", err)
+	}
+	mustPromoteToCanonical(t, s, firstID)
+
+	secondID, err := s.AddObservation(AddObservationParams{
+		SessionID: "s1",
+		Type:      "bugfix",
+		Title:     "Parser panic",
+		Content:   "Guard empty parser args",
+		Project:   "engram",
+		Scope:     "project",
+	})
+	if err != nil {
+		t.Fatalf("add second observation: %v", err)
+	}
+	mustPromoteToCanonical(t, s, secondID)
+
+	otherID, err := s.AddObservation(AddObservationParams{
+		SessionID: "s1",
+		Type:      "decision",
+		Title:     "Other project",
+		Content:   "This belongs elsewhere",
+		Project:   "other",
+		Scope:     "project",
+	})
+	if err != nil {
+		t.Fatalf("add other observation: %v", err)
+	}
+	mustPromoteToCanonical(t, s, otherID)
+
+	for _, query := range []string{"", "*", "  *  "} {
+		t.Run(fmt.Sprintf("query=%q", query), func(t *testing.T) {
+			results, err := s.Search(query, SearchOptions{Project: "engram", Scope: "project", Limit: 10, CanonicalStatus: "canonical"})
+			if err != nil {
+				t.Fatalf("search: %v", err)
+			}
+			if len(results) != 2 {
+				t.Fatalf("expected 2 matching observations, got %d", len(results))
+			}
+			if results[0].Project == nil || *results[0].Project != "engram" {
+				t.Fatalf("expected result project engram, got %#v", results[0].Project)
+			}
+		})
 	}
 }
 
@@ -3500,12 +3574,16 @@ func TestHookFallbacksAndAdditionalBranches(t *testing.T) {
 		if err := s.CreateSession("s-q", "proj-b", "/tmp/proj-b"); err != nil {
 			t.Fatalf("create session proj-b: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-p", Type: "decision", Title: "a", Content: "a", Project: "proj-a", Scope: "project"}); err != nil {
+		id1, err := s.AddObservation(AddObservationParams{SessionID: "s-p", Type: "decision", Title: "a", Content: "a", Project: "proj-a", Scope: "project"})
+		if err != nil {
 			t.Fatalf("add observation proj-a: %v", err)
 		}
-		if _, err := s.AddObservation(AddObservationParams{SessionID: "s-q", Type: "decision", Title: "b", Content: "b", Project: "proj-b", Scope: "project"}); err != nil {
+		mustPromoteToCanonical(t, s, id1)
+		id2, err := s.AddObservation(AddObservationParams{SessionID: "s-q", Type: "decision", Title: "b", Content: "b", Project: "proj-b", Scope: "project"})
+		if err != nil {
 			t.Fatalf("add observation proj-b: %v", err)
 		}
+		mustPromoteToCanonical(t, s, id2)
 
 		recent, err := s.RecentSessions("proj-a", 0)
 		if err != nil {
@@ -5753,10 +5831,11 @@ func TestMigrateProject(t *testing.T) {
 
 	// Seed data under old project name
 	s.CreateSession("s1", old, "/tmp/old")
-	s.AddObservation(AddObservationParams{
+	obsID, _ := s.AddObservation(AddObservationParams{
 		SessionID: "s1", Type: "decision", Title: "test obs",
 		Content: "some content", Project: old, Scope: "project",
 	})
+	mustPromoteToCanonical(t, s, obsID)
 	s.AddPrompt(AddPromptParams{SessionID: "s1", Content: "test prompt", Project: old})
 
 	// Run migration
@@ -5950,7 +6029,7 @@ func TestRecentObservationsNormalizesProjectFilter(t *testing.T) {
 		t.Fatalf("create session: %v", err)
 	}
 
-	_, err := s.AddObservation(AddObservationParams{
+	id, err := s.AddObservation(AddObservationParams{
 		SessionID: "s1",
 		Type:      "decision",
 		Title:     "Recent obs test",
@@ -5961,6 +6040,7 @@ func TestRecentObservationsNormalizesProjectFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddObservation: %v", err)
 	}
+	mustPromoteToCanonical(t, s, id)
 
 	// Query with uppercase project name
 	obs, err := s.RecentObservations("ENGRAM", "", 10)
@@ -6122,7 +6202,7 @@ func TestMergeProjects(t *testing.T) {
 	// Add observations to each source
 	for _, src := range []string{"engram", "engram-memory"} {
 		for i := 0; i < 2; i++ {
-			_, err := s.AddObservation(AddObservationParams{
+			id, err := s.AddObservation(AddObservationParams{
 				SessionID: "s1",
 				Type:      "decision",
 				Title:     "obs from " + src,
@@ -6133,6 +6213,7 @@ func TestMergeProjects(t *testing.T) {
 			if err != nil {
 				t.Fatalf("AddObservation %s: %v", src, err)
 			}
+			mustPromoteToCanonical(t, s, id)
 		}
 	}
 
@@ -6380,8 +6461,8 @@ func TestRecentObservationsOrderByCreatedAtBeforeID(t *testing.T) {
 		{id: 50, title: "newer-low-id", createdAt: "2025-01-02 00:00:00"},
 	}
 	for _, row := range rows {
-		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at)
-			VALUES (?, ?, 's-recent-created', 'note', ?, ?, 'proj', 'project', ?, 1, 1, ?, ?)`, row.id, fmt.Sprintf("obs-%d", row.id), row.title, row.title, row.title, row.createdAt, row.createdAt); err != nil {
+		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at, canonical_status)
+			VALUES (?, ?, 's-recent-created', 'note', ?, ?, 'proj', 'project', ?, 1, 1, ?, ?, 'canonical')`, row.id, fmt.Sprintf("obs-%d", row.id), row.title, row.title, row.title, row.createdAt, row.createdAt); err != nil {
 			t.Fatalf("insert observation %d: %v", row.id, err)
 		}
 	}
@@ -6401,8 +6482,8 @@ func TestRecentObservationsSameTimestampTiesByIDDesc(t *testing.T) {
 		t.Fatalf("create session: %v", err)
 	}
 	for _, id := range []int64{10, 20} {
-		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at)
-			VALUES (?, ?, 's-recent-tie', 'note', ?, ?, 'proj', 'project', ?, 1, 1, '2025-01-01 00:00:00', '2025-01-01 00:00:00')`, id, fmt.Sprintf("obs-tie-%d", id), fmt.Sprintf("tie-%d", id), fmt.Sprintf("tie-%d", id), fmt.Sprintf("hash-%d", id)); err != nil {
+		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at, canonical_status)
+			VALUES (?, ?, 's-recent-tie', 'note', ?, ?, 'proj', 'project', ?, 1, 1, '2025-01-01 00:00:00', '2025-01-01 00:00:00', 'canonical')`, id, fmt.Sprintf("obs-tie-%d", id), fmt.Sprintf("tie-%d", id), fmt.Sprintf("tie-%d", id), fmt.Sprintf("hash-%d", id)); err != nil {
 			t.Fatalf("insert observation %d: %v", id, err)
 		}
 	}

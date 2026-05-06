@@ -85,18 +85,18 @@ type Session struct {
 }
 
 type Observation struct {
-	ID             int64   `json:"id"`
-	SyncID         string  `json:"sync_id"`
-	SessionID      string  `json:"session_id"`
-	Type           string  `json:"type"`
-	Title          string  `json:"title"`
-	Content        string  `json:"content"`
-	ToolName       *string `json:"tool_name,omitempty"`
-	Project        *string `json:"project,omitempty"`
-	Scope          string  `json:"scope"`
-	TopicKey       *string `json:"topic_key,omitempty"`
-	OwnerTeam      *string `json:"owner_team,omitempty"`
-	System         *string `json:"system,omitempty"`
+	ID              int64   `json:"id"`
+	SyncID          string  `json:"sync_id"`
+	SessionID       string  `json:"session_id"`
+	Type            string  `json:"type"`
+	Title           string  `json:"title"`
+	Content         string  `json:"content"`
+	ToolName        *string `json:"tool_name,omitempty"`
+	Project         *string `json:"project,omitempty"`
+	Scope           string  `json:"scope"`
+	TopicKey        *string `json:"topic_key,omitempty"`
+	OwnerTeam       *string `json:"owner_team,omitempty"`
+	System          *string `json:"system,omitempty"`
 	Status          *string `json:"status,omitempty"`
 	Tags            *string `json:"tags,omitempty"`
 	Severity        *string `json:"severity,omitempty"`
@@ -184,16 +184,16 @@ type SearchOptions struct {
 }
 
 type AddObservationParams struct {
-	SessionID string `json:"session_id"`
-	Type      string `json:"type"`
-	Title     string `json:"title"`
-	Content   string `json:"content"`
-	ToolName  string `json:"tool_name,omitempty"`
-	Project   string `json:"project,omitempty"`
-	Scope     string `json:"scope,omitempty"`
-	TopicKey  string `json:"topic_key,omitempty"`
-	OwnerTeam string `json:"owner_team,omitempty"`
-	System    string `json:"system,omitempty"`
+	SessionID       string `json:"session_id"`
+	Type            string `json:"type"`
+	Title           string `json:"title"`
+	Content         string `json:"content"`
+	ToolName        string `json:"tool_name,omitempty"`
+	Project         string `json:"project,omitempty"`
+	Scope           string `json:"scope,omitempty"`
+	TopicKey        string `json:"topic_key,omitempty"`
+	OwnerTeam       string `json:"owner_team,omitempty"`
+	System          string `json:"system,omitempty"`
 	Status          string `json:"status,omitempty"`
 	Tags            string `json:"tags,omitempty"`
 	Severity        string `json:"severity,omitempty"`
@@ -207,14 +207,14 @@ type AddObservationParams struct {
 }
 
 type UpdateObservationParams struct {
-	Type      *string `json:"type,omitempty"`
-	Title     *string `json:"title,omitempty"`
-	Content   *string `json:"content,omitempty"`
-	Project   *string `json:"project,omitempty"`
-	Scope     *string `json:"scope,omitempty"`
-	TopicKey  *string `json:"topic_key,omitempty"`
-	OwnerTeam *string `json:"owner_team,omitempty"`
-	System    *string `json:"system,omitempty"`
+	Type            *string `json:"type,omitempty"`
+	Title           *string `json:"title,omitempty"`
+	Content         *string `json:"content,omitempty"`
+	Project         *string `json:"project,omitempty"`
+	Scope           *string `json:"scope,omitempty"`
+	TopicKey        *string `json:"topic_key,omitempty"`
+	OwnerTeam       *string `json:"owner_team,omitempty"`
+	System          *string `json:"system,omitempty"`
 	Status          *string `json:"status,omitempty"`
 	Tags            *string `json:"tags,omitempty"`
 	Severity        *string `json:"severity,omitempty"`
@@ -2113,7 +2113,7 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 			).Scan(&existingID)
 			if err == nil {
 				if _, err := s.execHook(tx,
-				`UPDATE observations
+					`UPDATE observations
 					 SET type = ?,
 					     title = ?,
 					     content = ?,
@@ -2131,20 +2131,20 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 					     last_seen_at = datetime('now'),
 					     updated_at = datetime('now')
 					 WHERE id = ?`,
-				p.Type,
-				title,
-				content,
-				nullableString(p.ToolName),
-				nullableString(topicKey),
-				normHash,
-				nullableString(p.OwnerTeam),
-				nullableString(p.System),
-				nullableString(p.Status),
-				nullableString(p.Tags),
-				nullableString(p.Severity),
-				nullableString(p.Audience),
-				nullableString(p.CreatedBy),
-				existingID,
+					p.Type,
+					title,
+					content,
+					nullableString(p.ToolName),
+					nullableString(topicKey),
+					normHash,
+					nullableString(p.OwnerTeam),
+					nullableString(p.System),
+					nullableString(p.Status),
+					nullableString(p.Tags),
+					nullableString(p.Severity),
+					nullableString(p.Audience),
+					nullableString(p.CreatedBy),
+					existingID,
 				); err != nil {
 					return err
 				}
@@ -2257,6 +2257,7 @@ func (s *Store) RecentObservations(project, scope string, limit int) ([]Observat
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
 		WHERE o.deleted_at IS NULL
+		  AND o.canonical_status IN ('reviewed', 'canonical')
 	`
 	args := []any{}
 
@@ -2931,6 +2932,99 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 	}
 	if limit > s.cfg.MaxSearchResults {
 		limit = s.cfg.MaxSearchResults
+	}
+
+	if isListAllSearch(query) {
+		sqlQ := `
+			SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
+			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
+			       canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+			       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
+			FROM observations
+			WHERE deleted_at IS NULL
+		`
+		args := []any{}
+
+		if opts.Type != "" {
+			sqlQ += " AND type = ?"
+			args = append(args, opts.Type)
+		}
+		if opts.Project != "" {
+			sqlQ += " AND project = ?"
+			args = append(args, opts.Project)
+		}
+		if opts.Scope != "" {
+			sqlQ += " AND scope = ?"
+			args = append(args, normalizeScope(opts.Scope))
+		}
+		if opts.Status != "" {
+			sqlQ += " AND status = ?"
+			args = append(args, opts.Status)
+		}
+		if opts.Tags != "" {
+			sqlQ += " AND tags LIKE ?"
+			args = append(args, "%"+opts.Tags+"%")
+		}
+		if opts.Severity != "" {
+			sqlQ += " AND severity = ?"
+			args = append(args, opts.Severity)
+		}
+		if opts.Audience != "" {
+			sqlQ += " AND audience = ?"
+			args = append(args, opts.Audience)
+		}
+		if opts.OwnerTeam != "" {
+			sqlQ += " AND owner_team = ?"
+			args = append(args, opts.OwnerTeam)
+		}
+		if opts.System != "" {
+			sqlQ += " AND system = ?"
+			args = append(args, opts.System)
+		}
+		if opts.CanonicalStatus != "" {
+			if strings.Contains(opts.CanonicalStatus, ",") {
+				statuses := strings.Split(opts.CanonicalStatus, ",")
+				placeholders := make([]string, len(statuses))
+				for i := range statuses {
+					placeholders[i] = "?"
+					args = append(args, strings.TrimSpace(statuses[i]))
+				}
+				sqlQ += " AND canonical_status IN (" + strings.Join(placeholders, ",") + ")"
+			} else {
+				sqlQ += " AND canonical_status = ?"
+				args = append(args, opts.CanonicalStatus)
+			}
+		}
+
+		sqlQ += " ORDER BY datetime(updated_at) DESC, id DESC LIMIT ?"
+		args = append(args, limit)
+
+		rows, err := s.queryItHook(s.db, sqlQ, args...)
+		if err != nil {
+			return nil, fmt.Errorf("search list: %w", err)
+		}
+		defer rows.Close()
+
+		var results []SearchResult
+		for rows.Next() {
+			var sr SearchResult
+			if err := rows.Scan(
+				&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
+				&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
+				&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
+				&sr.RevisionCount, &sr.DuplicateCount,
+				&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
+			); err != nil {
+				return nil, err
+			}
+			sr.Rank = -1000
+			results = append(results, sr)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		return results, nil
 	}
 
 	var directResults []SearchResult
@@ -6256,6 +6350,11 @@ func sanitizeFTS(query string) string {
 		words[i] = `"` + w + `"`
 	}
 	return strings.Join(words, " ")
+}
+
+func isListAllSearch(query string) bool {
+	query = strings.TrimSpace(query)
+	return query == "" || query == "*"
 }
 
 // ─── Passive Capture ─────────────────────────────────────────────────────────
