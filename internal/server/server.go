@@ -82,6 +82,11 @@ func New(s *store.Store, port int) *Server {
 	return srv
 }
 
+// Mux returns the underlying http.ServeMux for additional route mounting.
+func (s *Server) Mux() *http.ServeMux {
+	return s.mux
+}
+
 // SetOnWrite configures a callback invoked after every successful local write.
 // This is used to notify autosync.Manager via NotifyDirty().
 func (s *Server) SetOnWrite(fn func()) {

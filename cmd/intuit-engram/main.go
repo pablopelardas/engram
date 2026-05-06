@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/Gentleman-Programming/engram/internal/cloud/autosync"
 	"github.com/Gentleman-Programming/engram/internal/cloud/constants"
+	"github.com/Gentleman-Programming/engram/internal/cloud/dashboard"
 	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
 	"github.com/Gentleman-Programming/engram/internal/cloud/syncguidance"
 	"github.com/Gentleman-Programming/engram/internal/diagnostic"
@@ -780,6 +782,26 @@ func cmdServe(cfg store.Config) {
 		}
 		exitFunc(0)
 	}()
+
+	// Mount dashboard for local SQLite (no PostgreSQL required).
+	// This makes curation views available on regular `serve`.
+	localDashStore := newLocalDashboardStore(s)
+	dashboard.Mount(srv.Mux(), dashboard.MountConfig{
+		RequireSession: func(r *http.Request) error { return nil }, // No auth for local
+		ValidateLoginToken: func(token string) error {
+			if token == "" {
+				return fmt.Errorf("token required")
+			}
+			return nil
+		},
+		CreateSessionCookie: func(w http.ResponseWriter, r *http.Request, token string) error { return nil },
+		ClearSessionCookie:  func(w http.ResponseWriter, r *http.Request) {},
+		IsAdmin:             func(r *http.Request) bool { return true },
+		GetDisplayName:      func(r *http.Request) string { return "LOCAL" },
+		Store:               localDashStore,
+		MaxLoginBodyBytes:   4096,
+		StatusProvider:      serverSyncStatusAdapter{fallback: fallback},
+	})
 
 	if err := startHTTP(srv); err != nil {
 		fatal(err)
