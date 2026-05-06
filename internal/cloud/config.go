@@ -17,6 +17,11 @@ type Config struct {
 	BindHost        string
 	AdminToken      string
 	AllowedProjects []string
+	// IntuitHub integration. When IntuitHubBaseURL is set, the cloud server
+	// uses IntuitHub for organizational identity. AdminKey is required for
+	// the bulk sync job; the auth middleware validates user keys via /me.
+	IntuitHubBaseURL  string
+	IntuitHubAdminKey string
 }
 
 const DefaultJWTSecret = "engram-dev-jwt-secret-for-local-smoke-1234"
@@ -60,6 +65,12 @@ func ConfigFromEnv() Config {
 	}
 	if v := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_HOST")); v != "" {
 		cfg.BindHost = v
+	}
+	if v := strings.TrimSpace(os.Getenv(product.EnvIntuitHubBaseURL)); v != "" {
+		cfg.IntuitHubBaseURL = v
+	}
+	if v := strings.TrimSpace(os.Getenv(product.EnvIntuitHubAdminKey)); v != "" {
+		cfg.IntuitHubAdminKey = v
 	}
 	if v := strings.TrimSpace(os.Getenv("ENGRAM_CLOUD_ALLOWED_PROJECTS")); v != "" {
 		parts := strings.Split(v, ",")

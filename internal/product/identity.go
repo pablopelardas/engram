@@ -30,4 +30,7 @@ const (
 	LegacyEnvCloudAdmin     = "ENGRAM_CLOUD_ADMIN"
 	EnvJWTSecret            = "INTUIT_ENGRAM_JWT_SECRET"
 	LegacyEnvJWTSecret      = "ENGRAM_JWT_SECRET"
+	// IntuitHub integration: cloud-side only.
+	EnvIntuitHubBaseURL  = "INTUIT_ENGRAM_INTUITHUB_BASE_URL"
+	EnvIntuitHubAdminKey = "INTUIT_ENGRAM_INTUITHUB_ADMIN_KEY"
 )
