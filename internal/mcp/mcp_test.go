@@ -35,6 +35,16 @@ func newMCPTestStore(t *testing.T) *store.Store {
 	return s
 }
 
+// mustPromoteToCanonical updates an observation's canonical_status to 'canonical'.
+// Use this in search tests that need observations to be visible to agents.
+func mustPromoteToCanonical(t *testing.T, s *store.Store, id int64) {
+	t.Helper()
+	canonical := "canonical"
+	if _, err := s.UpdateObservation(id, store.UpdateObservationParams{CanonicalStatus: &canonical}); err != nil {
+		t.Fatalf("promote to canonical: %v", err)
+	}
+}
+
 func callResultText(t *testing.T, res *mcppkg.CallToolResult) string {
 	t.Helper()
 	if res == nil || len(res.Content) == 0 {
@@ -580,6 +590,7 @@ func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add observation: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsID)
 
 	search := handleSearch(s, MCPConfig{}, NewSessionActivity(10*time.Minute))
 	searchReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
@@ -1558,6 +1569,7 @@ func TestHandleSearch_SupersededAnnotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add old obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, oldID)
 	newID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-search-annot",
 		Type:      "decision",
@@ -1569,6 +1581,7 @@ func TestHandleSearch_SupersededAnnotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add new obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, newID)
 
 	// Get sync_ids.
 	oldObs, err := s.GetObservation(oldID)
@@ -1641,6 +1654,7 @@ func TestHandleSearch_PendingAsContested(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs A: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsAID)
 	obsBID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-contested",
 		Type:      "decision",
@@ -1652,6 +1666,7 @@ func TestHandleSearch_PendingAsContested(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs B: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsBID)
 
 	obsA, err := s.GetObservation(obsAID)
 	if err != nil {
@@ -1695,7 +1710,7 @@ func TestHandleSearch_NoRelationsUnchanged(t *testing.T) {
 		t.Fatalf("create session: %v", err)
 	}
 
-	_, err := s.AddObservation(store.AddObservationParams{
+	obsID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-no-rel",
 		Type:      "bugfix",
 		Title:     "Fix parser panic",
@@ -1706,6 +1721,7 @@ func TestHandleSearch_NoRelationsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsID)
 
 	search := handleSearch(s, MCPConfig{}, NewSessionActivity(10*time.Minute))
 	searchReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
@@ -2646,13 +2662,14 @@ func TestSearchResponseIncludesNudgeAfterInactivity(t *testing.T) {
 
 	// Seed a memory to search for
 	s.CreateSession("s1", "myproject", "")
-	s.AddObservation(store.AddObservationParams{
+	obsID, _ := s.AddObservation(store.AddObservationParams{
 		SessionID: "s1",
 		Type:      "manual",
 		Title:     "test memory",
 		Content:   "some content",
 		Project:   "myproject",
 	})
+	mustPromoteToCanonical(t, s, obsID)
 
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	activity := NewSessionActivity(10 * time.Minute)
@@ -4805,6 +4822,7 @@ func TestMemSearch_AnnotatesConflictsWith_Judged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs A: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsAID)
 	obsBID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1a",
 		Type:      "decision",
@@ -4816,6 +4834,7 @@ func TestMemSearch_AnnotatesConflictsWith_Judged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs B: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsBID)
 
 	obsA, err := s.GetObservation(obsAID)
 	if err != nil {
@@ -4883,6 +4902,7 @@ func TestMemSearch_PendingConflict_KeepsPhase1Annotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs A: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsAID)
 	obsBID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1b",
 		Type:      "decision",
@@ -4894,6 +4914,7 @@ func TestMemSearch_PendingConflict_KeepsPhase1Annotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add obs B: %v", err)
 	}
+	mustPromoteToCanonical(t, s, obsBID)
 
 	obsA, err := s.GetObservation(obsAID)
 	if err != nil {
@@ -4960,6 +4981,7 @@ func TestMemSearch_TitleEnrichment_SupersedesAndSupersededBy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add old obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, oldID)
 	newID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1c",
 		Type:      "decision",
@@ -4971,6 +4993,7 @@ func TestMemSearch_TitleEnrichment_SupersedesAndSupersededBy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add new obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, newID)
 
 	oldObs, err := s.GetObservation(oldID)
 	if err != nil {
@@ -5044,6 +5067,7 @@ func TestMemSearch_TitleEnrichment_FallsBackToDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add deleted obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, deletedID)
 	// source obs that supersedes the deleted one.
 	sourceID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1d",
@@ -5056,6 +5080,7 @@ func TestMemSearch_TitleEnrichment_FallsBackToDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add source obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, sourceID)
 
 	deletedObs, err := s.GetObservation(deletedID)
 	if err != nil {
@@ -5128,6 +5153,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add central obs: %v", err)
 	}
+	mustPromoteToCanonical(t, s, centralID)
 	// Target for supersedes.
 	supersedesTargetID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
@@ -5140,6 +5166,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add supersedes target: %v", err)
 	}
+	mustPromoteToCanonical(t, s, supersedesTargetID)
 	// Target for conflicts_with.
 	conflictsTargetID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-f1e",
@@ -5152,6 +5179,7 @@ func TestMemSearch_AllThreeTypes_FormatExact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("add conflicts target: %v", err)
 	}
+	mustPromoteToCanonical(t, s, conflictsTargetID)
 
 	centralObs, err := s.GetObservation(centralID)
 	if err != nil {

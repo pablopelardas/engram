@@ -950,15 +950,23 @@ func handleSearch(s *store.Store, cfg MCPConfig, activity *SessionActivity) serv
 		sessionID := defaultSessionID(project)
 		activity.RecordToolCall(sessionID)
 
+		// Default: agents only see reviewed and canonical observations.
+		// Drafts are only visible when explicitly requested via include_drafts.
+		canonicalStatus := "reviewed,canonical"
+		if boolArg(req, "include_drafts", false) {
+			canonicalStatus = ""
+		}
+
 		results, err := s.Search(query, store.SearchOptions{
-			Type:     typ,
-			Project:  project,
-			Scope:    scope,
-			Status:   status,
-			Tags:     tags,
-			Severity: severity,
-			Audience: audience,
-			Limit:    limit,
+			Type:            typ,
+			Project:         project,
+			Scope:           scope,
+			Status:          status,
+			Tags:            tags,
+			Severity:        severity,
+			Audience:        audience,
+			Limit:           limit,
+			CanonicalStatus: canonicalStatus,
 		})
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Search error: %s. Try simpler keywords.", err)), nil

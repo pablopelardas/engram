@@ -149,7 +149,8 @@ func TestConflictLoop_SaveJudgeSearch(t *testing.T) {
 	// title/content. Single-term query avoids FTS AND-semantics excluding either.
 	searchRes, err := searchH(context.Background(), mcppkg.CallToolRequest{
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
-			"query": "sessions",
+			"query":          "sessions",
+			"include_drafts": true,
 		}},
 	})
 	if err != nil {
@@ -394,9 +395,10 @@ func TestConflictLoop_Orphaning(t *testing.T) {
 	// REQ-010 edge case: orphaned relations are invisible in search annotations.
 	searchRes, err := searchH(context.Background(), mcppkg.CallToolRequest{
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
-			"query":   "Redis caching layer",
-			"project": "engram",
-			"scope":   "project",
+			"query":          "Redis caching layer",
+			"project":        "engram",
+			"scope":          "project",
+			"include_drafts": true,
 		}},
 	})
 	if err != nil {
@@ -571,17 +573,23 @@ func TestConflictLoop_BackwardsCompat(t *testing.T) {
 	if err := s.CreateSession("s-compat", "engram", "/tmp"); err != nil {
 		t.Fatalf("G.5 create session: %v", err)
 	}
-	if _, err := s.AddObservation(store.AddObservationParams{
+	obsID, err := s.AddObservation(store.AddObservationParams{
 		SessionID: "s-compat",
 		Type:      "bugfix",
 		Title:     "Fixed null pointer in cache lookup",
 		Content:   "Null check added before cache.Get() call",
 		Project:   "engram",
 		Scope:     "project",
-	}); err != nil {
-		t.Fatalf("G.5 add observation for search: %v", err)
+	})
+	if err != nil {
+		t.Fatalf("G.5 seed obs: %v", err)
+	}
+	canonical := "canonical"
+	if _, err := s.UpdateObservation(obsID, store.UpdateObservationParams{CanonicalStatus: &canonical}); err != nil {
+		t.Fatalf("promote to canonical: %v", err)
 	}
 
+	// ── Case 3: mem_search — old client reads result string. ─────────────────
 	searchRes, err := searchH(context.Background(), mcppkg.CallToolRequest{
 		Params: mcppkg.CallToolParams{Arguments: map[string]any{
 			"query":   "cache lookup null pointer",

@@ -2664,6 +2664,26 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 		if p.CreatedBy != nil {
 			createdBy = *p.CreatedBy
 		}
+		canonicalStatus := obs.CanonicalStatus
+		if p.CanonicalStatus != nil {
+			canonicalStatus = *p.CanonicalStatus
+		}
+		reviewedAt := derefString(obs.ReviewedAt)
+		if p.ReviewedAt != nil {
+			reviewedAt = *p.ReviewedAt
+		}
+		reviewedBy := derefString(obs.ReviewedBy)
+		if p.ReviewedBy != nil {
+			reviewedBy = *p.ReviewedBy
+		}
+		promotedAt := derefString(obs.PromotedAt)
+		if p.PromotedAt != nil {
+			promotedAt = *p.PromotedAt
+		}
+		promotedBy := derefString(obs.PromotedBy)
+		if p.PromotedBy != nil {
+			promotedBy = *p.PromotedBy
+		}
 
 		// Validate type against closed taxonomy if changing
 		if p.Type != nil && typ != "" && !IsAllowedType(typ) {
@@ -2686,6 +2706,11 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			     severity = ?,
 			     audience = ?,
 			     created_by = ?,
+			     canonical_status = ?,
+			     reviewed_at = ?,
+			     reviewed_by = ?,
+			     promoted_at = ?,
+			     promoted_by = ?,
 			     revision_count = revision_count + 1,
 			     updated_at = datetime('now')
 			 WHERE id = ? AND deleted_at IS NULL`,
@@ -2703,6 +2728,11 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			nullableString(severity),
 			nullableString(audience),
 			nullableString(createdBy),
+			canonicalStatus,
+			nullableString(reviewedAt),
+			nullableString(reviewedBy),
+			nullableString(promotedAt),
+			nullableString(promotedBy),
 			id,
 		); err != nil {
 			return err
