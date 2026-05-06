@@ -170,16 +170,17 @@ type TimelineResult struct {
 }
 
 type SearchOptions struct {
-	Type      string `json:"type,omitempty"`
-	Project   string `json:"project,omitempty"`
-	Scope     string `json:"scope,omitempty"`
-	Limit     int    `json:"limit,omitempty"`
-	Status    string `json:"status,omitempty"`
-	Tags      string `json:"tags,omitempty"`
-	Severity  string `json:"severity,omitempty"`
-	Audience  string `json:"audience,omitempty"`
-	OwnerTeam string `json:"owner_team,omitempty"`
-	System    string `json:"system,omitempty"`
+	Type            string `json:"type,omitempty"`
+	Project         string `json:"project,omitempty"`
+	Scope           string `json:"scope,omitempty"`
+	Limit           int    `json:"limit,omitempty"`
+	Status          string `json:"status,omitempty"`
+	Tags            string `json:"tags,omitempty"`
+	Severity        string `json:"severity,omitempty"`
+	Audience        string `json:"audience,omitempty"`
+	OwnerTeam       string `json:"owner_team,omitempty"`
+	System          string `json:"system,omitempty"`
+	CanonicalStatus string `json:"canonical_status,omitempty"`
 }
 
 type AddObservationParams struct {
@@ -2949,6 +2950,20 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 			tkSQL += " AND system = ?"
 			tkArgs = append(tkArgs, opts.System)
 		}
+		if opts.CanonicalStatus != "" {
+			if strings.Contains(opts.CanonicalStatus, ",") {
+				statuses := strings.Split(opts.CanonicalStatus, ",")
+				placeholders := make([]string, len(statuses))
+				for i := range statuses {
+					placeholders[i] = "?"
+					tkArgs = append(tkArgs, strings.TrimSpace(statuses[i]))
+				}
+				tkSQL += " AND canonical_status IN (" + strings.Join(placeholders, ",") + ")"
+			} else {
+				tkSQL += " AND canonical_status = ?"
+				tkArgs = append(tkArgs, opts.CanonicalStatus)
+			}
+		}
 
 		tkSQL += " ORDER BY updated_at DESC LIMIT ?"
 		tkArgs = append(tkArgs, limit)
@@ -3026,6 +3041,20 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 	if opts.System != "" {
 		sqlQ += " AND o.system = ?"
 		args = append(args, opts.System)
+	}
+	if opts.CanonicalStatus != "" {
+		if strings.Contains(opts.CanonicalStatus, ",") {
+			statuses := strings.Split(opts.CanonicalStatus, ",")
+			placeholders := make([]string, len(statuses))
+			for i := range statuses {
+				placeholders[i] = "?"
+				args = append(args, strings.TrimSpace(statuses[i]))
+			}
+			sqlQ += " AND o.canonical_status IN (" + strings.Join(placeholders, ",") + ")"
+		} else {
+			sqlQ += " AND o.canonical_status = ?"
+			args = append(args, opts.CanonicalStatus)
+		}
 	}
 
 	sqlQ += " ORDER BY fts.rank LIMIT ?"
