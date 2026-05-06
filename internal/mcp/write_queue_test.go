@@ -273,7 +273,7 @@ func TestQueuedHandleSavePersistsMemory(t *testing.T) {
 		t.Fatalf("queued save response missing project: %v", env)
 	}
 
-	obs, err := s.RecentObservations(project, "project", 5)
+	obs, err := s.AllObservations(project, "project", 5)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}

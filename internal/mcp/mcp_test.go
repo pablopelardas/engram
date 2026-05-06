@@ -290,7 +290,7 @@ func TestHandleSavePromptCaptureFailureIsNonFatal(t *testing.T) {
 		t.Fatalf("unexpected save error: %s", callResultText(t, res))
 	}
 
-	obs, err := s.RecentObservations("engram", "project", 5)
+	obs, err := s.AllObservations("engram", "project", 5)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}
@@ -504,7 +504,7 @@ func TestHandleCapturePassiveDefaultsSourceAndSession(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", callResultText(t, res))
 	}
 
-	obs, err := s.RecentObservations("engram", "project", 5)
+	obs, err := s.AllObservations("engram", "project", 5)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}
@@ -752,7 +752,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 		t.Fatalf("unexpected stats error: %s", callResultText(t, statsRes))
 	}
 
-	recent, err := s.RecentObservations("engram", "project", 1)
+	recent, err := s.AllObservations("engram", "project", 1)
 	if err != nil || len(recent) == 0 {
 		t.Fatalf("recent observations for timeline: %v len=%d", err, len(recent))
 	}
@@ -2389,7 +2389,7 @@ func TestHandleSaveAutoDetectsWhenNoProjectArg(t *testing.T) {
 		t.Fatalf("unexpected error: %s", callResultText(t, res))
 	}
 
-	obs, err := s.RecentObservations("auto-project", "project", 5)
+	obs, err := s.AllObservations("auto-project", "project", 5)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}
@@ -2426,7 +2426,7 @@ func TestHandleSaveProjectNameNormalized(t *testing.T) {
 	}
 
 	// Observation must be under the normalized (lowercase) project name.
-	obs, err := s.RecentObservations("myapp", "project", 5)
+	obs, err := s.AllObservations("myapp", "project", 5)
 	if err != nil || len(obs) == 0 {
 		t.Fatal("expected observation stored under normalized project name 'myapp'")
 	}
@@ -2582,7 +2582,7 @@ func TestHandleMergeProjects(t *testing.T) {
 	}
 
 	// Verify that engram-memory observations are now under "engram"
-	obs, err := s.RecentObservations("engram", "project", 10)
+	obs, err := s.AllObservations("engram", "project", 10)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}
@@ -2691,12 +2691,12 @@ func TestHandleSave_LLMProjectIgnored(t *testing.T) {
 	}
 
 	// Must NOT be in the LLM-supplied project.
-	obs, _ := s.RecentObservations("llm-wrong-project", "project", 5)
+	obs, _ := s.AllObservations("llm-wrong-project", "project", 5)
 	if len(obs) > 0 {
 		t.Fatal("observation must NOT be in LLM-supplied project")
 	}
 	// Must be in the auto-detected project.
-	obs2, err := s.RecentObservations("auto-detected-project", "project", 5)
+	obs2, err := s.AllObservations("auto-detected-project", "project", 5)
 	if err != nil || len(obs2) == 0 {
 		t.Fatal("expected observation in auto-detected-project")
 	}
@@ -4277,7 +4277,7 @@ func TestMemSessionSummary_AutoDetectsProject(t *testing.T) {
 		t.Fatalf("session summary: err=%v isError=%v text=%q", err, res.IsError, callResultText(t, res))
 	}
 
-	obs, err := s.RecentObservations("summary-auto-project", "project", 5)
+	obs, err := s.AllObservations("summary-auto-project", "project", 5)
 	if err != nil || len(obs) == 0 {
 		t.Fatal("expected session_summary observation under auto-detected project 'summary-auto-project'")
 	}

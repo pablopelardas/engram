@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C C:/intuit/engram log --oneline -5 -- internal/mcp/mcp.go internal/store/store.go)"
+    ]
+  }
+}

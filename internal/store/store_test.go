@@ -1221,8 +1221,8 @@ func TestSessionsOrderedByMostRecentActivity(t *testing.T) {
 	}
 
 	_, err = s.db.Exec(
-		`INSERT INTO observations (session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+		`INSERT INTO observations (session_id, type, title, content, project, scope, normalized_hash, canonical_status, revision_count, duplicate_count, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, 'canonical', 1, 1, ?, ?)`,
 		"s-older", "note", "latest", "session old got new activity", "engram", "project", hashNormalized("session old got new activity"), "2026-02-03 09:00:00", "2026-02-03 09:00:00",
 	)
 	if err != nil {
@@ -6523,8 +6523,8 @@ func TestRecentSessionsOrderByLatestCreatedAtDeterministically(t *testing.T) {
 		{id: 2, sessionID: "sess-b", createdAt: "2025-01-02 00:00:00"},
 		{id: 3, sessionID: "sess-c", createdAt: "2025-01-03 00:00:00"},
 	} {
-		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, created_at, updated_at)
-			VALUES (?, ?, ?, 'note', ?, ?, 'proj', 'project', ?, 1, 1, ?, ?)`, row.id, fmt.Sprintf("obs-session-%d", row.id), row.sessionID, row.sessionID, row.sessionID, fmt.Sprintf("hash-session-%d", row.id), row.createdAt, row.createdAt); err != nil {
+		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, canonical_status, revision_count, duplicate_count, created_at, updated_at)
+			VALUES (?, ?, ?, 'note', ?, ?, 'proj', 'project', ?, 'canonical', 1, 1, ?, ?)`, row.id, fmt.Sprintf("obs-session-%d", row.id), row.sessionID, row.sessionID, row.sessionID, fmt.Sprintf("hash-session-%d", row.id), row.createdAt, row.createdAt); err != nil {
 			t.Fatalf("insert observation %d: %v", row.id, err)
 		}
 	}
@@ -6535,6 +6535,42 @@ func TestRecentSessionsOrderByLatestCreatedAtDeterministically(t *testing.T) {
 	}
 	if len(sessions) < 3 || sessions[0].ID != "sess-c" || sessions[1].ID != "sess-a" || sessions[2].ID != "sess-b" {
 		t.Fatalf("expected latest created_at desc with session id desc tie-breaker, got %+v", sessions)
+	}
+}
+
+func TestRecentSessions_ObservationCountExcludesDrafts(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.CreateSession("sess-mixed", "proj", "/tmp"); err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+	rows := []struct {
+		id              int64
+		canonicalStatus string
+	}{
+		{id: 1, canonicalStatus: "draft"},
+		{id: 2, canonicalStatus: "draft"},
+		{id: 3, canonicalStatus: "reviewed"},
+		{id: 4, canonicalStatus: "canonical"},
+		{id: 5, canonicalStatus: "deprecated"},
+	}
+	for _, r := range rows {
+		if _, err := s.db.Exec(`INSERT INTO observations (id, sync_id, session_id, type, title, content, project, scope, normalized_hash, canonical_status, revision_count, duplicate_count)
+			VALUES (?, ?, 'sess-mixed', 'note', ?, ?, 'proj', 'project', ?, ?, 1, 1)`,
+			r.id, fmt.Sprintf("obs-mixed-%d", r.id), fmt.Sprintf("title-%d", r.id), fmt.Sprintf("content-%d", r.id), fmt.Sprintf("hash-mixed-%d", r.id), r.canonicalStatus); err != nil {
+			t.Fatalf("insert observation %d: %v", r.id, err)
+		}
+	}
+
+	sessions, err := s.RecentSessions("proj", 10)
+	if err != nil {
+		t.Fatalf("RecentSessions: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 session, got %d", len(sessions))
+	}
+	// Drafts and deprecated must be excluded; only reviewed + canonical count.
+	if sessions[0].ObservationCount != 2 {
+		t.Fatalf("expected ObservationCount=2 (only reviewed+canonical), got %d", sessions[0].ObservationCount)
 	}
 }
 

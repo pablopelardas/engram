@@ -5,7 +5,7 @@
         "mcp",
         "--tools=agent"
       ],
-      "command": "D:\\engram\\intuit-engram.exe"
+      "command": "C:\\intuit\\engram\\intuit-engram.exe"
     }
   }
 }

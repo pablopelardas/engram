@@ -1951,11 +1951,17 @@ func (s *Store) RecentSessions(project string, limit int) ([]SessionSummary, err
 		limit = 5
 	}
 
+	// observation_count must align with what mem_context's "Recent Observations"
+	// section actually shows (RecentObservations filters to reviewed/canonical).
+	// Otherwise the header reports a count the agent can't see, causing it to
+	// chase non-existent memories.
 	query := `
 		SELECT s.id, s.project, s.started_at, s.ended_at, s.summary,
 		       COUNT(o.id) as observation_count
 		FROM sessions s
-		LEFT JOIN observations o ON o.session_id = s.id AND o.deleted_at IS NULL
+		LEFT JOIN observations o ON o.session_id = s.id
+		    AND o.deleted_at IS NULL
+		    AND o.canonical_status IN ('reviewed', 'canonical')
 		WHERE 1=1
 	`
 	args := []any{}
