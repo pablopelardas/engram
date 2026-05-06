@@ -63,6 +63,7 @@ type DashboardStore interface {
 	// Paginated list methods (from cloud-dashboard-visual-parity).
 	ListProjectsPaginated(query string, limit, offset int) ([]cloudstore.DashboardProjectRow, int, error)
 	ListRecentObservationsPaginated(project, query, obsType string, limit, offset int) ([]cloudstore.DashboardObservationRow, int, error)
+	ListObservationsByStatusPaginated(project, query, canonicalStatus string, limit, offset int) ([]cloudstore.DashboardObservationRow, int, error)
 	ListRecentSessionsPaginated(project, query string, limit, offset int) ([]cloudstore.DashboardSessionRow, int, error)
 	ListRecentPromptsPaginated(project, query string, limit, offset int) ([]cloudstore.DashboardPromptRow, int, error)
 	ListContributorsPaginated(query string, limit, offset int) ([]cloudstore.DashboardContributorRow, int, error)
@@ -148,6 +149,12 @@ func Mount(mux *http.ServeMux, cfg MountConfig) {
 	mux.HandleFunc("GET /dashboard/views/runbooks", h.requireSession(h.handleViewRunbooks))
 	mux.HandleFunc("GET /dashboard/views/known-issues", h.requireSession(h.handleViewKnownIssues))
 	mux.HandleFunc("GET /dashboard/views/decisions", h.requireSession(h.handleViewDecisions))
+
+	// Curation routes (P2.2)
+	mux.HandleFunc("GET /dashboard/curation", h.requireSession(h.handleCurationHome))
+	mux.HandleFunc("GET /dashboard/curation/pending", h.requireSession(h.handleCurationPending))
+	mux.HandleFunc("GET /dashboard/curation/canonical", h.requireSession(h.handleCurationCanonical))
+	mux.HandleFunc("GET /dashboard/curation/deprecated", h.requireSession(h.handleCurationDeprecated))
 }
 
 func Handler() http.Handler {
@@ -1270,4 +1277,66 @@ func parseAuditFilter(r *http.Request) (cloudstore.AuditFilter, string) {
 		filter.OccurredAtTo = t
 	}
 	return filter, ""
+}
+
+// ─── Curation Handlers (P2.2) ────────────────────────────────────────────────
+
+func (h *handlers) handleCurationHome(w http.ResponseWriter, r *http.Request) {
+	p := h.principalFromRequest(r)
+	// Show counts for each status
+	draftCount, canonicalCount, deprecatedCount := 0, 0, 0
+	if h.cfg.Store != nil {
+		if _, total, err := h.cfg.Store.ListObservationsByStatusPaginated("", "", "draft", 1, 0); err == nil {
+			draftCount = total
+		}
+		if _, total, err := h.cfg.Store.ListObservationsByStatusPaginated("", "", "canonical", 1, 0); err == nil {
+			canonicalCount = total
+		}
+		if _, total, err := h.cfg.Store.ListObservationsByStatusPaginated("", "", "deprecated", 1, 0); err == nil {
+			deprecatedCount = total
+		}
+	}
+	component := CurationHomePage(draftCount, canonicalCount, deprecatedCount)
+	renderComponent(w, r, Layout("Curation", p.DisplayName(), "curation", p.IsAdmin(), component))
+}
+
+func (h *handlers) handleCurationPending(w http.ResponseWriter, r *http.Request) {
+	h.handleCurationStatus(w, r, "draft", "Pending Review")
+}
+
+func (h *handlers) handleCurationCanonical(w http.ResponseWriter, r *http.Request) {
+	h.handleCurationStatus(w, r, "canonical", "Canonical")
+}
+
+func (h *handlers) handleCurationDeprecated(w http.ResponseWriter, r *http.Request) {
+	h.handleCurationStatus(w, r, "deprecated", "Deprecated")
+}
+
+func (h *handlers) handleCurationStatus(w http.ResponseWriter, r *http.Request, status, title string) {
+	p := h.principalFromRequest(r)
+	project := strings.TrimSpace(r.URL.Query().Get("project"))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	reqPage, pageSize := parsePaginationRaw(r)
+	rows := make([]cloudstore.DashboardObservationRow, 0)
+	total := 0
+	if h.cfg.Store != nil {
+		var err error
+		rows, total, err = h.cfg.Store.ListObservationsByStatusPaginated(project, query, status, pageSize, (reqPage-1)*pageSize)
+		if err != nil {
+			h.renderStoreError(w, r, "curation", title, err)
+			return
+		}
+	}
+	pg, needsRefetch := reclampPagination(reqPage, pageSize, total)
+	if needsRefetch && h.cfg.Store != nil {
+		if refetched, _, err := h.cfg.Store.ListObservationsByStatusPaginated(project, query, status, pageSize, pg.Offset()); err == nil {
+			rows = refetched
+		}
+	}
+	partial := ObservationsPartial(rows, pg)
+	if isHTMXRequest(r) {
+		renderComponent(w, r, partial)
+		return
+	}
+	renderComponent(w, r, Layout(title, p.DisplayName(), "curation", p.IsAdmin(), CurationStatusPage(status, title, project, query, partial)))
 }

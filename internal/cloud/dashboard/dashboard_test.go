@@ -107,6 +107,12 @@ func (s parityStoreStub) ListRecentObservationsPaginated(_, _, _ string, _, _ in
 	}
 	return s.observations, len(s.observations), nil
 }
+func (s parityStoreStub) ListObservationsByStatusPaginated(_, _, _ string, _, _ int) ([]cloudstore.DashboardObservationRow, int, error) {
+	if s.errListRecentObservations != nil {
+		return nil, 0, s.errListRecentObservations
+	}
+	return s.observations, len(s.observations), nil
+}
 func (s parityStoreStub) ListRecentSessionsPaginated(_, _ string, _, _ int) ([]cloudstore.DashboardSessionRow, int, error) {
 	return s.sessions, len(s.sessions), nil
 }

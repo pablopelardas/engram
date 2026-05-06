@@ -514,6 +514,21 @@ func typeBadgeVariant(obsType string) string {
 	}
 }
 
+func canonicalStatusBadgeVariant(status string) string {
+	switch status {
+	case "draft":
+		return "warning"
+	case "reviewed":
+		return "success"
+	case "canonical":
+		return "success"
+	case "deprecated":
+		return "danger"
+	default:
+		return "muted"
+	}
+}
+
 // ─── URL helpers ─────────────────────────────────────────────────────────────
 
 func safeQuery(urlPath string, rawQuery string) string {

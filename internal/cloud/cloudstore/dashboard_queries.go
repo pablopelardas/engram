@@ -54,16 +54,17 @@ type DashboardSessionRow struct {
 }
 
 type DashboardObservationRow struct {
-	Project   string
-	SessionID string
-	SyncID    string // unique map key — used for detail page URL segment
-	ChunkID   string // chunk the observation was first written in (preserved across mutations)
-	Type      string
-	Title     string
-	Content   string // NEW — materialized from chunk payload
-	TopicKey  string // NEW — from observation payload
-	ToolName  string // NEW — from observation payload
-	CreatedAt string
+	Project         string
+	SessionID       string
+	SyncID          string // unique map key — used for detail page URL segment
+	ChunkID         string // chunk the observation was first written in (preserved across mutations)
+	Type            string
+	Title           string
+	Content         string // NEW — materialized from chunk payload
+	TopicKey        string // NEW — from observation payload
+	ToolName        string // NEW — from observation payload
+	CreatedAt       string
+	CanonicalStatus string // NEW — from observation payload
 }
 
 type DashboardPromptRow struct {
@@ -207,7 +208,7 @@ func buildDashboardReadModelFromRows(chunks []dashboardChunkRow, mutationRows []
 			if obs.ToolName != nil {
 				toolName = *obs.ToolName
 			}
-			upsertDashboardObservation(observations, obs.SyncID, obsProject, obs.SessionID, obs.Type, obs.Title, obs.Content, topicKey, toolName, chunk.chunkID, obs.CreatedAt)
+			upsertDashboardObservation(observations, obs.SyncID, obsProject, obs.SessionID, obs.Type, obs.Title, obs.Content, topicKey, toolName, chunk.chunkID, obs.CreatedAt, obs.CanonicalStatus)
 		}
 		for _, prompt := range chunk.parsed.Prompts {
 			upsertDashboardPrompt(prompts, prompt.SyncID, resolveProjectValue(prompt.Project, project), prompt.SessionID, prompt.Content, chunk.chunkID, prompt.CreatedAt)
@@ -491,23 +492,24 @@ func upsertDashboardSession(sessions map[dashboardEntityKey]DashboardSessionRow,
 	}
 }
 
-func upsertDashboardObservation(observations map[dashboardEntityKey]DashboardObservationRow, syncID, project, sessionID, obsType, title, content, topicKey, toolName, chunkID, createdAt string) {
+func upsertDashboardObservation(observations map[dashboardEntityKey]DashboardObservationRow, syncID, project, sessionID, obsType, title, content, topicKey, toolName, chunkID, createdAt, canonicalStatus string) {
 	key := strings.TrimSpace(syncID)
 	if key == "" {
 		return
 	}
 	trimmedProject := strings.TrimSpace(project)
 	observations[newDashboardEntityKey(trimmedProject, key)] = DashboardObservationRow{
-		SyncID:    key,
-		Project:   trimmedProject,
-		SessionID: strings.TrimSpace(sessionID),
-		ChunkID:   strings.TrimSpace(chunkID),
-		Type:      strings.TrimSpace(obsType),
-		Title:     strings.TrimSpace(title),
-		Content:   strings.TrimSpace(content),
-		TopicKey:  strings.TrimSpace(topicKey),
-		ToolName:  strings.TrimSpace(toolName),
-		CreatedAt: strings.TrimSpace(createdAt),
+		SyncID:          key,
+		Project:         trimmedProject,
+		SessionID:       strings.TrimSpace(sessionID),
+		ChunkID:         strings.TrimSpace(chunkID),
+		Type:            strings.TrimSpace(obsType),
+		Title:           strings.TrimSpace(title),
+		Content:         strings.TrimSpace(content),
+		TopicKey:        strings.TrimSpace(topicKey),
+		ToolName:        strings.TrimSpace(toolName),
+		CreatedAt:       strings.TrimSpace(createdAt),
+		CanonicalStatus: strings.TrimSpace(canonicalStatus),
 	}
 }
 
@@ -644,6 +646,7 @@ func applyDashboardMutation(
 		existingTopicKey := ""
 		existingToolName := ""
 		existingCreatedAt := ""
+		existingCanonicalStatus := ""
 		if existing, ok := observations[newDashboardEntityKey(project, key)]; ok {
 			existingChunkID = existing.ChunkID
 			existingSessionID = existing.SessionID
@@ -653,6 +656,7 @@ func applyDashboardMutation(
 			existingTopicKey = existing.TopicKey
 			existingToolName = existing.ToolName
 			existingCreatedAt = existing.CreatedAt
+			existingCanonicalStatus = existing.CanonicalStatus
 		}
 		resolvedSessionID := body.SessionID
 		if resolvedSessionID == "" {
@@ -682,7 +686,7 @@ func applyDashboardMutation(
 		if resolvedCreatedAt == "" {
 			resolvedCreatedAt = existingCreatedAt
 		}
-		upsertDashboardObservation(observations, key, project, resolvedSessionID, resolvedType, resolvedTitle, resolvedContent, resolvedTopicKey, resolvedToolName, existingChunkID, resolvedCreatedAt)
+		upsertDashboardObservation(observations, key, project, resolvedSessionID, resolvedType, resolvedTitle, resolvedContent, resolvedTopicKey, resolvedToolName, existingChunkID, resolvedCreatedAt, existingCanonicalStatus)
 	case store.SyncEntityPrompt:
 		var body dashboardPromptMutationPayload
 		if err := chunkcodec.DecodeSyncMutationPayload(mutation.Payload, &body); err != nil {
@@ -1372,6 +1376,39 @@ func (cs *CloudStore) ListRecentObservationsPaginated(project, query, obsType st
 		filtered := make([]DashboardObservationRow, 0)
 		for _, r := range rows {
 			if strings.EqualFold(r.Type, obsType) {
+				filtered = append(filtered, r)
+			}
+		}
+		rows = filtered
+	}
+	total := len(rows)
+	if offset > total {
+		return []DashboardObservationRow{}, total, nil
+	}
+	end := offset + limit
+	if end > total || limit <= 0 {
+		end = total
+	}
+	return rows[offset:end], total, nil
+}
+
+// ListObservationsByStatusPaginated returns observations filtered by canonical_status.
+func (cs *CloudStore) ListObservationsByStatusPaginated(project, query, canonicalStatus string, limit, offset int) ([]DashboardObservationRow, int, error) {
+	normalizedProject, err := cs.normalizeDashboardProjectFilter(project)
+	if err != nil {
+		return nil, 0, err
+	}
+	model, err := cs.loadDashboardReadModel()
+	if err != nil {
+		return nil, 0, err
+	}
+	rows := model.filterObservations(normalizedProject, query)
+	// Apply canonical_status filter.
+	canonicalStatus = strings.TrimSpace(canonicalStatus)
+	if canonicalStatus != "" {
+		filtered := make([]DashboardObservationRow, 0)
+		for _, r := range rows {
+			if strings.EqualFold(r.CanonicalStatus, canonicalStatus) {
 				filtered = append(filtered, r)
 			}
 		}

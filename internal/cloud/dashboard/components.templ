@@ -15,14 +15,15 @@ templ NavTabs(activeTab string, isAdmin bool) {
 	<div role="tablist">
 		@navTab("/dashboard/", "Dashboard", "dashboard", activeTab)
 		@navTab("/dashboard/browser", "Browser", "browser", activeTab)
-		@navTab("/dashboard/views/runbooks", "Runbooks", "runbooks", activeTab)
-		@navTab("/dashboard/views/known-issues", "Known Issues", "known-issues", activeTab)
-		@navTab("/dashboard/views/decisions", "Decisions", "decisions", activeTab)
-		@navTab("/dashboard/projects", "Projects", "projects", activeTab)
-		@navTab("/dashboard/contributors", "Contributors", "contributors", activeTab)
-		if isAdmin {
-			@navTab("/dashboard/admin", "Admin", "admin", activeTab)
-		}
+	@navTab("/dashboard/views/runbooks", "Runbooks", "runbooks", activeTab)
+	@navTab("/dashboard/views/known-issues", "Known Issues", "known-issues", activeTab)
+	@navTab("/dashboard/views/decisions", "Decisions", "decisions", activeTab)
+	@navTab("/dashboard/curation", "Curation", "curation", activeTab)
+	@navTab("/dashboard/projects", "Projects", "projects", activeTab)
+	@navTab("/dashboard/contributors", "Contributors", "contributors", activeTab)
+	if isAdmin {
+		@navTab("/dashboard/admin", "Admin", "admin", activeTab)
+	}
 	</div>
 }
 
@@ -335,18 +336,19 @@ templ ObservationsPartial(observations []cloudstore.DashboardObservationRow, pg 
 		<div class="observation-list">
 			for _, o := range observations {
 				<a href={ templ.SafeURL(fmt.Sprintf("/dashboard/observations/%s/%s/%s", url.PathEscape(o.Project), url.PathEscape(o.SessionID), url.PathEscape(o.SyncID))) } class="card-link">
-					<article class="card">
-						<header>
-							<strong>{ o.Title }</strong>
-							@StatusBadge(o.Type, typeBadgeVariant(o.Type))
-							@StatusBadge(o.Project, "muted")
-						</header>
-						<p>{ renderInlineStructuredPreview(o.Content, 220) }</p>
-						<footer>
-							<small>{ formatTimestamp(o.CreatedAt) }</small>
-							<small>Session { o.SessionID }</small>
-						</footer>
-					</article>
+				<article class="card">
+					<header>
+						<strong>{ o.Title }</strong>
+						@StatusBadge(o.Type, typeBadgeVariant(o.Type))
+						@StatusBadge(o.CanonicalStatus, canonicalStatusBadgeVariant(o.CanonicalStatus))
+						@StatusBadge(o.Project, "muted")
+					</header>
+					<p>{ renderInlineStructuredPreview(o.Content, 220) }</p>
+					<footer>
+						<small>{ formatTimestamp(o.CreatedAt) }</small>
+						<small>Session { o.SessionID }</small>
+					</footer>
+				</article>
 				</a>
 			}
 		</div>
@@ -1233,5 +1235,49 @@ templ AdminAuditLogListPartial(entries []cloudstore.DashboardAuditRow, pg Pagina
 			</table>
 			@HtmxPaginationBar(pg, "/dashboard/admin/audit-log/list", "#audit-log-content", "#audit-contributor, #audit-project, #audit-outcome, #audit-from, #audit-to")
 		}
+	</div>
+}
+
+// ─── Curation Components (P2.2) ──────────────────────────────────────────────
+
+templ CurationHomePage(draftCount, canonicalCount, deprecatedCount int) {
+	<div>
+		<h2>Observation Curation</h2>
+		<p class="section-kicker">Review, promote, and deprecate observations</p>
+		<div class="stat-grid">
+			<a href="/dashboard/curation/pending" class="stat-card">
+				<span class="stat-number">{ fmt.Sprint(draftCount) }</span>
+				<span class="stat-label">Pending Review</span>
+				<span class="stat-desc">Draft observations awaiting curation</span>
+			</a>
+			<a href="/dashboard/curation/canonical" class="stat-card">
+				<span class="stat-number">{ fmt.Sprint(canonicalCount) }</span>
+				<span class="stat-label">Canonical</span>
+				<span class="stat-desc">Approved source-of-truth observations</span>
+			</a>
+			<a href="/dashboard/curation/deprecated" class="stat-card">
+				<span class="stat-number">{ fmt.Sprint(deprecatedCount) }</span>
+				<span class="stat-label">Deprecated</span>
+				<span class="stat-desc">Outdated or superseded observations</span>
+			</a>
+		</div>
+	</div>
+}
+
+templ CurationStatusPage(status, title, project, query string, partial templ.Component) {
+	<div>
+		<h2>{ title }</h2>
+		<form class="browser-controls" method="get" action={ templ.SafeURL(fmt.Sprintf("/dashboard/curation/%s", status)) }
+			hx-get={ fmt.Sprintf("/dashboard/curation/%s", status) }
+			hx-target="#curation-content"
+			hx-swap="innerHTML"
+			hx-trigger="submit">
+			<input id="curation-project" type="text" name="project" placeholder="Project" value={ project }/>
+			<input id="curation-search" type="text" name="q" placeholder="Search" value={ query }/>
+			<button type="submit">Filter</button>
+		</form>
+		<div id="curation-content">
+			@partial
+		</div>
 	</div>
 }
