@@ -101,18 +101,19 @@ type Observation struct {
 	Tags            *string `json:"tags,omitempty"`
 	Severity        *string `json:"severity,omitempty"`
 	Audience        *string `json:"audience,omitempty"`
-	CreatedBy       *string `json:"created_by,omitempty"`
-	CanonicalStatus string  `json:"canonical_status"`
-	ReviewedAt      *string `json:"reviewed_at,omitempty"`
-	ReviewedBy      *string `json:"reviewed_by,omitempty"`
-	PromotedAt      *string `json:"promoted_at,omitempty"`
-	PromotedBy      *string `json:"promoted_by,omitempty"`
-	RevisionCount   int     `json:"revision_count"`
-	DuplicateCount  int     `json:"duplicate_count"`
-	LastSeenAt      *string `json:"last_seen_at,omitempty"`
-	CreatedAt       string  `json:"created_at"`
-	UpdatedAt       string  `json:"updated_at"`
-	DeletedAt       *string `json:"deleted_at,omitempty"`
+	CreatedBy         *string `json:"created_by,omitempty"`
+	CreatedByCollabID *int    `json:"created_by_collab_id,omitempty"`
+	CanonicalStatus   string  `json:"canonical_status"`
+	ReviewedAt        *string `json:"reviewed_at,omitempty"`
+	ReviewedBy        *string `json:"reviewed_by,omitempty"`
+	PromotedAt        *string `json:"promoted_at,omitempty"`
+	PromotedBy        *string `json:"promoted_by,omitempty"`
+	RevisionCount     int     `json:"revision_count"`
+	DuplicateCount    int     `json:"duplicate_count"`
+	LastSeenAt        *string `json:"last_seen_at,omitempty"`
+	CreatedAt         string  `json:"created_at"`
+	UpdatedAt         string  `json:"updated_at"`
+	DeletedAt         *string `json:"deleted_at,omitempty"`
 }
 
 type SearchResult struct {
@@ -192,39 +193,41 @@ type AddObservationParams struct {
 	Project         string `json:"project,omitempty"`
 	Scope           string `json:"scope,omitempty"`
 	TopicKey        string `json:"topic_key,omitempty"`
-	OwnerTeam       string `json:"owner_team,omitempty"`
-	System          string `json:"system,omitempty"`
-	Status          string `json:"status,omitempty"`
-	Tags            string `json:"tags,omitempty"`
-	Severity        string `json:"severity,omitempty"`
-	Audience        string `json:"audience,omitempty"`
-	CreatedBy       string `json:"created_by,omitempty"`
-	CanonicalStatus string `json:"canonical_status,omitempty"`
-	ReviewedAt      string `json:"reviewed_at,omitempty"`
-	ReviewedBy      string `json:"reviewed_by,omitempty"`
-	PromotedAt      string `json:"promoted_at,omitempty"`
-	PromotedBy      string `json:"promoted_by,omitempty"`
+	OwnerTeam         string `json:"owner_team,omitempty"`
+	System            string `json:"system,omitempty"`
+	Status            string `json:"status,omitempty"`
+	Tags              string `json:"tags,omitempty"`
+	Severity          string `json:"severity,omitempty"`
+	Audience          string `json:"audience,omitempty"`
+	CreatedBy         string `json:"created_by,omitempty"`
+	CreatedByCollabID int    `json:"created_by_collab_id,omitempty"`
+	CanonicalStatus   string `json:"canonical_status,omitempty"`
+	ReviewedAt        string `json:"reviewed_at,omitempty"`
+	ReviewedBy        string `json:"reviewed_by,omitempty"`
+	PromotedAt        string `json:"promoted_at,omitempty"`
+	PromotedBy        string `json:"promoted_by,omitempty"`
 }
 
 type UpdateObservationParams struct {
-	Type            *string `json:"type,omitempty"`
-	Title           *string `json:"title,omitempty"`
-	Content         *string `json:"content,omitempty"`
-	Project         *string `json:"project,omitempty"`
-	Scope           *string `json:"scope,omitempty"`
-	TopicKey        *string `json:"topic_key,omitempty"`
-	OwnerTeam       *string `json:"owner_team,omitempty"`
-	System          *string `json:"system,omitempty"`
-	Status          *string `json:"status,omitempty"`
-	Tags            *string `json:"tags,omitempty"`
-	Severity        *string `json:"severity,omitempty"`
-	Audience        *string `json:"audience,omitempty"`
-	CreatedBy       *string `json:"created_by,omitempty"`
-	CanonicalStatus *string `json:"canonical_status,omitempty"`
-	ReviewedAt      *string `json:"reviewed_at,omitempty"`
-	ReviewedBy      *string `json:"reviewed_by,omitempty"`
-	PromotedAt      *string `json:"promoted_at,omitempty"`
-	PromotedBy      *string `json:"promoted_by,omitempty"`
+	Type              *string `json:"type,omitempty"`
+	Title             *string `json:"title,omitempty"`
+	Content           *string `json:"content,omitempty"`
+	Project           *string `json:"project,omitempty"`
+	Scope             *string `json:"scope,omitempty"`
+	TopicKey          *string `json:"topic_key,omitempty"`
+	OwnerTeam         *string `json:"owner_team,omitempty"`
+	System            *string `json:"system,omitempty"`
+	Status            *string `json:"status,omitempty"`
+	Tags              *string `json:"tags,omitempty"`
+	Severity          *string `json:"severity,omitempty"`
+	Audience          *string `json:"audience,omitempty"`
+	CreatedBy         *string `json:"created_by,omitempty"`
+	CreatedByCollabID *int    `json:"created_by_collab_id,omitempty"`
+	CanonicalStatus   *string `json:"canonical_status,omitempty"`
+	ReviewedAt        *string `json:"reviewed_at,omitempty"`
+	ReviewedBy        *string `json:"reviewed_by,omitempty"`
+	PromotedAt        *string `json:"promoted_at,omitempty"`
+	PromotedBy        *string `json:"promoted_by,omitempty"`
 }
 
 type Prompt struct {
@@ -426,14 +429,26 @@ type syncObservationPayload struct {
 	Severity       *string `json:"severity,omitempty"`
 	Audience       *string `json:"audience,omitempty"`
 	CreatedBy      *string `json:"created_by,omitempty"`
-	RevisionCount  int     `json:"revision_count"`
-	DuplicateCount int     `json:"duplicate_count"`
-	LastSeenAt     *string `json:"last_seen_at,omitempty"`
-	CreatedAt      string  `json:"created_at,omitempty"`
-	UpdatedAt      string  `json:"updated_at,omitempty"`
-	Deleted        bool    `json:"deleted,omitempty"`
-	DeletedAt      *string `json:"deleted_at,omitempty"`
-	HardDelete     bool    `json:"hard_delete,omitempty"`
+	// IntuitHub integration: collaborator id from IntuitHub. Used cloud-side
+	// to filter visibility (a draft is visible only to its author). Optional
+	// for legacy observations; required for new ones authored after the
+	// IntuitHub bridge is enabled.
+	CreatedByCollabID *int    `json:"created_by_collab_id,omitempty"`
+	// Stadio of the observation (draft / reviewed / canonical / deprecated).
+	// Required for cloud-side visibility filtering.
+	CanonicalStatus string  `json:"canonical_status,omitempty"`
+	ReviewedAt      *string `json:"reviewed_at,omitempty"`
+	ReviewedBy      *string `json:"reviewed_by,omitempty"`
+	PromotedAt      *string `json:"promoted_at,omitempty"`
+	PromotedBy      *string `json:"promoted_by,omitempty"`
+	RevisionCount   int     `json:"revision_count"`
+	DuplicateCount  int     `json:"duplicate_count"`
+	LastSeenAt      *string `json:"last_seen_at,omitempty"`
+	CreatedAt       string  `json:"created_at,omitempty"`
+	UpdatedAt       string  `json:"updated_at,omitempty"`
+	Deleted         bool    `json:"deleted,omitempty"`
+	DeletedAt       *string `json:"deleted_at,omitempty"`
+	HardDelete      bool    `json:"hard_delete,omitempty"`
 }
 
 type syncPromptPayload struct {
@@ -2040,7 +2055,7 @@ func (s *Store) AllObservations(project, scope string, limit int) ([]Observation
 
 	query := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by, o.created_by_collab_id,
 		       o.canonical_status, o.reviewed_at, o.reviewed_by, o.promoted_at, o.promoted_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
@@ -2071,7 +2086,7 @@ func (s *Store) SessionObservations(sessionID string, limit int) ([]Observation,
 
 	query := `
 		SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+		       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 		       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		FROM observations
 		WHERE session_id = ? AND deleted_at IS NULL
@@ -2210,11 +2225,11 @@ func (s *Store) AddObservation(p AddObservationParams) (int64, error) {
 			canonicalStatus = "draft"
 		}
 		res, err := s.execHook(tx,
-			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, canonical_status, revision_count, duplicate_count, last_seen_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
+			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, revision_count, duplicate_count, last_seen_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
 			syncID, p.SessionID, p.Type, title, content,
 			nullableString(p.ToolName), nullableString(p.Project), scope, nullableString(topicKey), normHash,
-			nullableString(p.OwnerTeam), nullableString(p.System), nullableString(p.Status), nullableString(p.Tags), nullableString(p.Severity), nullableString(p.Audience), nullableString(p.CreatedBy), canonicalStatus,
+			nullableString(p.OwnerTeam), nullableString(p.System), nullableString(p.Status), nullableString(p.Tags), nullableString(p.Severity), nullableString(p.Audience), nullableString(p.CreatedBy), nullableInt(p.CreatedByCollabID), canonicalStatus,
 		)
 		if err != nil {
 			return err
@@ -2271,7 +2286,7 @@ func (s *Store) recentObservations(project, scope string, limit int, canonicalOn
 
 	query := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by, o.created_by_collab_id,
 		       o.canonical_status, o.reviewed_at, o.reviewed_by, o.promoted_at, o.promoted_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at
 		FROM observations o
@@ -2605,7 +2620,7 @@ func (s *Store) DeletePrompt(id int64) error {
 func (s *Store) GetObservation(id int64) (*Observation, error) {
 	row := s.db.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE id = ? AND deleted_at IS NULL`, id,
 	)
@@ -2613,7 +2628,7 @@ func (s *Store) GetObservation(id int64) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -2686,6 +2701,13 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 		if p.CreatedBy != nil {
 			createdBy = *p.CreatedBy
 		}
+		createdByCollabID := 0
+		if obs.CreatedByCollabID != nil {
+			createdByCollabID = *obs.CreatedByCollabID
+		}
+		if p.CreatedByCollabID != nil {
+			createdByCollabID = *p.CreatedByCollabID
+		}
 		canonicalStatus := obs.CanonicalStatus
 		if p.CanonicalStatus != nil {
 			canonicalStatus = *p.CanonicalStatus
@@ -2728,6 +2750,7 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			     severity = ?,
 			     audience = ?,
 			     created_by = ?,
+			     created_by_collab_id = ?,
 			     canonical_status = ?,
 			     reviewed_at = ?,
 			     reviewed_by = ?,
@@ -2750,6 +2773,7 @@ func (s *Store) UpdateObservation(id int64, p UpdateObservationParams) (*Observa
 			nullableString(severity),
 			nullableString(audience),
 			nullableString(createdBy),
+			nullableInt(createdByCollabID),
 			canonicalStatus,
 			nullableString(reviewedAt),
 			nullableString(reviewedBy),
@@ -2958,7 +2982,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 	if isListAllSearch(query) {
 		sqlQ := `
 			SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by,
+			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id,
 			       canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 			       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 			FROM observations
@@ -3032,7 +3056,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 			if err := rows.Scan(
 				&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
 				&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
-				&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
+				&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CreatedByCollabID, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
 				&sr.RevisionCount, &sr.DuplicateCount,
 				&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
 			); err != nil {
@@ -3052,7 +3076,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 	if strings.Contains(query, "/") {
 		tkSQL := `
 			SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+			       scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 			       revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 			FROM observations
 			WHERE topic_key = ? AND deleted_at IS NULL
@@ -3121,7 +3145,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 				if err := tkRows.Scan(
 					&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
 					&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
-					&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
+					&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CreatedByCollabID, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
 					&sr.RevisionCount, &sr.DuplicateCount,
 					&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
 				); err != nil {
@@ -3138,7 +3162,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 
 	sqlQ := `
 		SELECT o.id, ifnull(o.sync_id, '') as sync_id, o.session_id, o.type, o.title, o.content, o.tool_name, o.project,
-		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by,
+		       o.scope, o.topic_key, o.owner_team, o.system, o.status, o.tags, o.severity, o.audience, o.created_by, o.created_by_collab_id,
 		       o.canonical_status, o.reviewed_at, o.reviewed_by, o.promoted_at, o.promoted_by,
 		       o.revision_count, o.duplicate_count, o.last_seen_at, o.created_at, o.updated_at, o.deleted_at,
 		       fts.rank
@@ -3223,7 +3247,7 @@ func (s *Store) Search(query string, opts SearchOptions) ([]SearchResult, error)
 		if err := rows.Scan(
 			&sr.ID, &sr.SyncID, &sr.SessionID, &sr.Type, &sr.Title, &sr.Content,
 			&sr.ToolName, &sr.Project, &sr.Scope, &sr.TopicKey,
-			&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
+			&sr.OwnerTeam, &sr.System, &sr.Status, &sr.Tags, &sr.Severity, &sr.Audience, &sr.CreatedBy, &sr.CreatedByCollabID, &sr.CanonicalStatus, &sr.ReviewedAt, &sr.ReviewedBy, &sr.PromotedAt, &sr.PromotedBy,
 			&sr.RevisionCount, &sr.DuplicateCount,
 			&sr.LastSeenAt, &sr.CreatedAt, &sr.UpdatedAt, &sr.DeletedAt,
 			&sr.Rank,
@@ -3420,7 +3444,7 @@ func (s *Store) exportWithProjectScope(project string) (*ExportData, error) {
 
 	// Observations
 	obsQuery := `SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-	        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+	        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 	        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 	 FROM observations`
 	obsArgs := []any{}
@@ -3441,7 +3465,7 @@ func (s *Store) exportWithProjectScope(project string) (*ExportData, error) {
 		if err := obsRows.Scan(
 			&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 			&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 			&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 			&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 		); err != nil {
@@ -4258,7 +4282,7 @@ func (s *Store) ApplyPulledChunk(targetKey, chunkID string, mutations []SyncMuta
 func (s *Store) GetObservationBySyncID(syncID string) (*Observation, error) {
 	row := s.db.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE sync_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`,
 		syncID,
@@ -4267,7 +4291,7 @@ func (s *Store) GetObservationBySyncID(syncID string) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5507,7 +5531,7 @@ func decodeSyncPayload(payload []byte, dest any) error {
 func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 	row := tx.QueryRow(
 		`SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE id = ? AND deleted_at IS NULL`, id,
 	)
@@ -5515,7 +5539,7 @@ func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5526,7 +5550,7 @@ func (s *Store) getObservationTx(tx *sql.Tx, id int64) (*Observation, error) {
 
 func (s *Store) getObservationBySyncIDTx(tx *sql.Tx, syncID string, includeDeleted bool) (*Observation, error) {
 	query := `SELECT id, ifnull(sync_id, '') as sync_id, session_id, type, title, content, tool_name, project,
-		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+		        scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 		        revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at
 		 FROM observations WHERE sync_id = ?`
 	if !includeDeleted {
@@ -5538,7 +5562,7 @@ func (s *Store) getObservationBySyncIDTx(tx *sql.Tx, syncID string, includeDelet
 	if err := row.Scan(
 		&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 		&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+		&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 		&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 		&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 	); err != nil {
@@ -5549,27 +5573,33 @@ func (s *Store) getObservationBySyncIDTx(tx *sql.Tx, syncID string, includeDelet
 
 func observationPayloadFromObservation(obs *Observation) syncObservationPayload {
 	return syncObservationPayload{
-		SyncID:         obs.SyncID,
-		SessionID:      obs.SessionID,
-		Type:           obs.Type,
-		Title:          obs.Title,
-		Content:        obs.Content,
-		ToolName:       obs.ToolName,
-		Project:        obs.Project,
-		Scope:          obs.Scope,
-		TopicKey:       obs.TopicKey,
-		OwnerTeam:      obs.OwnerTeam,
-		System:         obs.System,
-		Status:         obs.Status,
-		Tags:           obs.Tags,
-		Severity:       obs.Severity,
-		Audience:       obs.Audience,
-		CreatedBy:      obs.CreatedBy,
-		RevisionCount:  obs.RevisionCount,
-		DuplicateCount: obs.DuplicateCount,
-		LastSeenAt:     obs.LastSeenAt,
-		CreatedAt:      obs.CreatedAt,
-		UpdatedAt:      obs.UpdatedAt,
+		SyncID:            obs.SyncID,
+		SessionID:         obs.SessionID,
+		Type:              obs.Type,
+		Title:             obs.Title,
+		Content:           obs.Content,
+		ToolName:          obs.ToolName,
+		Project:           obs.Project,
+		Scope:             obs.Scope,
+		TopicKey:          obs.TopicKey,
+		OwnerTeam:         obs.OwnerTeam,
+		System:            obs.System,
+		Status:            obs.Status,
+		Tags:              obs.Tags,
+		Severity:          obs.Severity,
+		Audience:          obs.Audience,
+		CreatedBy:         obs.CreatedBy,
+		CreatedByCollabID: obs.CreatedByCollabID,
+		CanonicalStatus:   obs.CanonicalStatus,
+		ReviewedAt:        obs.ReviewedAt,
+		ReviewedBy:        obs.ReviewedBy,
+		PromotedAt:        obs.PromotedAt,
+		PromotedBy:        obs.PromotedBy,
+		RevisionCount:     obs.RevisionCount,
+		DuplicateCount:    obs.DuplicateCount,
+		LastSeenAt:        obs.LastSeenAt,
+		CreatedAt:         obs.CreatedAt,
+		UpdatedAt:         obs.UpdatedAt,
 	}
 }
 
@@ -5625,11 +5655,16 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 		updatedAt = createdAt
 	}
 
+	canonicalStatus := strings.TrimSpace(payload.CanonicalStatus)
+	if canonicalStatus == "" {
+		canonicalStatus = "draft"
+	}
+
 	existing, err := s.getObservationBySyncIDTx(tx, payload.SyncID, true)
 	if err == sql.ErrNoRows {
 		_, err = s.execHook(tx,
-			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+			`INSERT INTO observations (sync_id, session_id, type, title, content, tool_name, project, scope, topic_key, normalized_hash, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by, revision_count, duplicate_count, last_seen_at, created_at, updated_at, deleted_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 			payload.SyncID,
 			payload.SessionID,
 			payload.Type,
@@ -5647,6 +5682,12 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 			payload.Severity,
 			payload.Audience,
 			payload.CreatedBy,
+			payload.CreatedByCollabID,
+			canonicalStatus,
+			payload.ReviewedAt,
+			payload.ReviewedBy,
+			payload.PromotedAt,
+			payload.PromotedBy,
 			revisionCount,
 			duplicateCount,
 			payload.LastSeenAt,
@@ -5677,7 +5718,7 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 
 	_, err = s.execHook(tx,
 		`UPDATE observations
-		 SET session_id = ?, type = ?, title = ?, content = ?, tool_name = ?, project = ?, scope = ?, topic_key = ?, normalized_hash = ?, owner_team = ?, system = ?, status = ?, tags = ?, severity = ?, audience = ?, created_by = ?, revision_count = ?, duplicate_count = ?, last_seen_at = ?, created_at = ?, updated_at = ?, deleted_at = NULL
+		 SET session_id = ?, type = ?, title = ?, content = ?, tool_name = ?, project = ?, scope = ?, topic_key = ?, normalized_hash = ?, owner_team = ?, system = ?, status = ?, tags = ?, severity = ?, audience = ?, created_by = ?, created_by_collab_id = ?, canonical_status = ?, reviewed_at = ?, reviewed_by = ?, promoted_at = ?, promoted_by = ?, revision_count = ?, duplicate_count = ?, last_seen_at = ?, created_at = ?, updated_at = ?, deleted_at = NULL
 		 WHERE id = ?`,
 		payload.SessionID,
 		payload.Type,
@@ -5695,6 +5736,12 @@ func (s *Store) applyObservationUpsertTx(tx *sql.Tx, payload syncObservationPayl
 		payload.Severity,
 		payload.Audience,
 		payload.CreatedBy,
+		payload.CreatedByCollabID,
+		canonicalStatus,
+		payload.ReviewedAt,
+		payload.ReviewedBy,
+		payload.PromotedAt,
+		payload.PromotedBy,
 		revisionCount,
 		duplicateCount,
 		payload.LastSeenAt,
@@ -5828,7 +5875,7 @@ func (s *Store) queryObservations(query string, args ...any) ([]Observation, err
 		if err := rows.Scan(
 			&o.ID, &o.SyncID, &o.SessionID, &o.Type, &o.Title, &o.Content,
 			&o.ToolName, &o.Project, &o.Scope, &o.TopicKey,
-			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
+			&o.OwnerTeam, &o.System, &o.Status, &o.Tags, &o.Severity, &o.Audience, &o.CreatedBy, &o.CreatedByCollabID, &o.CanonicalStatus, &o.ReviewedAt, &o.ReviewedBy, &o.PromotedAt, &o.PromotedBy,
 			&o.RevisionCount, &o.DuplicateCount, &o.LastSeenAt,
 			&o.CreatedAt, &o.UpdatedAt, &o.DeletedAt,
 		); err != nil {
@@ -6020,6 +6067,7 @@ func (s *Store) migrateLegacyObservationsTable() error {
 			severity   TEXT,
 			audience   TEXT,
 			created_by TEXT,
+			created_by_collab_id INTEGER,
 			canonical_status TEXT NOT NULL DEFAULT 'draft',
 			reviewed_at TEXT,
 			reviewed_by TEXT,
@@ -6041,7 +6089,7 @@ func (s *Store) migrateLegacyObservationsTable() error {
 	if _, err := s.execHook(tx, `
 		INSERT INTO observations_migrated (
 			id, sync_id, session_id, type, title, content, tool_name, project,
-			scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
+			scope, topic_key, owner_team, system, status, tags, severity, audience, created_by, created_by_collab_id, canonical_status, reviewed_at, reviewed_by, promoted_at, promoted_by,
 			normalized_hash, revision_count, duplicate_count,
 			last_seen_at, created_at, updated_at, deleted_at
 		)
@@ -6066,7 +6114,8 @@ func (s *Store) migrateLegacyObservationsTable() error {
 			NULLIF(tags, ''),
 			NULLIF(severity, ''),
 			NULLIF(audience, ''),
-			NULL,
+			NULL, -- created_by
+			NULL, -- created_by_collab_id
 			'draft',
 			NULL,
 			NULL,
@@ -6128,6 +6177,13 @@ func nullableString(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func nullableInt(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
 }
 
 func truncate(s string, max int) string {

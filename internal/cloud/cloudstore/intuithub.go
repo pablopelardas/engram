@@ -10,6 +10,154 @@ import (
 	"time"
 )
 
+// ─── cloud_observations materialization ────────────────────────────────────
+
+// observationPayloadFields is the subset of syncObservationPayload we need
+// to materialize cloud_observations. We re-decode here instead of importing
+// internal/store to avoid a dependency cycle.
+type observationPayloadFields struct {
+	SyncID            string  `json:"sync_id"`
+	SessionID         string  `json:"session_id"`
+	Type              string  `json:"type"`
+	Title             string  `json:"title"`
+	Content           string  `json:"content"`
+	Project           *string `json:"project,omitempty"`
+	Scope             string  `json:"scope"`
+	TopicKey          *string `json:"topic_key,omitempty"`
+	CreatedBy         *string `json:"created_by,omitempty"`
+	CreatedByCollabID *int    `json:"created_by_collab_id,omitempty"`
+	CanonicalStatus   string  `json:"canonical_status,omitempty"`
+	CreatedAt         string  `json:"created_at,omitempty"`
+	UpdatedAt         string  `json:"updated_at,omitempty"`
+	Deleted           bool    `json:"deleted,omitempty"`
+	DeletedAt         *string `json:"deleted_at,omitempty"`
+	HardDelete        bool    `json:"hard_delete,omitempty"`
+}
+
+// upsertCloudObservationFromMutationTx applies an observation mutation
+// payload onto cloud_observations. It enforces last-writer-wins via
+// updated_seq: out-of-order pushes (lower seq than what's already stored)
+// are dropped, so replay is idempotent.
+//
+// project comes from the cloud_mutations row (authoritative); the payload's
+// own project field is used as a fallback only.
+func upsertCloudObservationFromMutationTx(ctx context.Context, tx *sql.Tx, seq int64, mutationProject, entityKey, op string, payload json.RawMessage) error {
+	syncID := strings.TrimSpace(entityKey)
+	if syncID == "" {
+		return fmt.Errorf("empty entity_key")
+	}
+
+	var p observationPayloadFields
+	if len(payload) > 0 {
+		if err := json.Unmarshal(payload, &p); err != nil {
+			return fmt.Errorf("decode payload: %w", err)
+		}
+	}
+
+	project := strings.TrimSpace(mutationProject)
+	if project == "" && p.Project != nil {
+		project = strings.TrimSpace(*p.Project)
+	}
+	if project == "" {
+		project = "default"
+	}
+
+	canonicalStatus := strings.TrimSpace(p.CanonicalStatus)
+	if canonicalStatus == "" {
+		canonicalStatus = "draft"
+	}
+
+	// Hard delete: physically remove the row. Used for "reject draft" flows.
+	if p.HardDelete {
+		_, err := tx.ExecContext(ctx, `DELETE FROM cloud_observations WHERE sync_id = $1`, syncID)
+		return err
+	}
+
+	// Soft delete: set deleted_at, keep the row for tombstone semantics.
+	if op == "delete" || p.Deleted {
+		deletedAt := ""
+		if p.DeletedAt != nil {
+			deletedAt = strings.TrimSpace(*p.DeletedAt)
+		}
+		if deletedAt == "" {
+			deletedAt = time.Now().UTC().Format(time.RFC3339)
+		}
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO cloud_observations (sync_id, project, deleted_at, canonical_status, updated_seq)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (sync_id) DO UPDATE SET
+				project = EXCLUDED.project,
+				deleted_at = EXCLUDED.deleted_at,
+				updated_seq = EXCLUDED.updated_seq
+			WHERE EXCLUDED.updated_seq > cloud_observations.updated_seq`,
+			syncID, project, deletedAt, canonicalStatus, seq)
+		return err
+	}
+
+	// Upsert: full row. updated_seq guards against out-of-order replays.
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO cloud_observations
+			(sync_id, project, session_id, type, title, content, scope, topic_key,
+			 canonical_status, created_by, created_by_collab_id,
+			 created_at, updated_at, deleted_at, updated_seq)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6,
+		        NULLIF($7, ''), $8,
+		        $9, $10, $11,
+		        NULLIF($12, ''), NULLIF($13, ''), NULL, $14)
+		ON CONFLICT (sync_id) DO UPDATE SET
+			project              = EXCLUDED.project,
+			session_id           = EXCLUDED.session_id,
+			type                 = EXCLUDED.type,
+			title                = EXCLUDED.title,
+			content              = EXCLUDED.content,
+			scope                = EXCLUDED.scope,
+			topic_key            = EXCLUDED.topic_key,
+			canonical_status     = EXCLUDED.canonical_status,
+			created_by           = EXCLUDED.created_by,
+			created_by_collab_id = EXCLUDED.created_by_collab_id,
+			created_at           = COALESCE(EXCLUDED.created_at, cloud_observations.created_at),
+			updated_at           = EXCLUDED.updated_at,
+			deleted_at           = NULL,
+			updated_seq          = EXCLUDED.updated_seq
+		WHERE EXCLUDED.updated_seq > cloud_observations.updated_seq`,
+		syncID,
+		project,
+		p.SessionID,
+		p.Type,
+		p.Title,
+		p.Content,
+		p.Scope,
+		nullableStringPtr(p.TopicKey),
+		canonicalStatus,
+		nullableStringPtr(p.CreatedBy),
+		nullableIntPtr(p.CreatedByCollabID),
+		p.CreatedAt,
+		p.UpdatedAt,
+		seq,
+	)
+	return err
+}
+
+// nullableStringPtr returns nil for empty/whitespace-only strings, *s otherwise.
+func nullableStringPtr(s *string) any {
+	if s == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*s)
+	if v == "" {
+		return nil
+	}
+	return v
+}
+
+// nullableIntPtr returns nil for nil/zero ints, *n otherwise.
+func nullableIntPtr(n *int) any {
+	if n == nil || *n == 0 {
+		return nil
+	}
+	return *n
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────
 
 // IntuitHubUser is the projection of cloud_users joined with the IntuitHub

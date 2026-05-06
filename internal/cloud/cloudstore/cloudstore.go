@@ -721,6 +721,31 @@ func (cs *CloudStore) migrate(ctx context.Context) error {
 			CONSTRAINT intuithub_sync_state_singleton CHECK (id = 1)
 		)`,
 		`INSERT INTO intuithub_sync_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+
+		// cloud_observations: materialized projection of observation upserts
+		// for visibility filters and dashboard queries. Rows are upserted from
+		// cloud_mutations payload at insert time. Soft-deleted via deleted_at.
+		`CREATE TABLE IF NOT EXISTS cloud_observations (
+			sync_id              TEXT PRIMARY KEY,
+			project              TEXT NOT NULL,
+			session_id           TEXT,
+			type                 TEXT,
+			title                TEXT,
+			content              TEXT,
+			scope                TEXT,
+			topic_key            TEXT,
+			canonical_status     TEXT NOT NULL DEFAULT 'draft',
+			created_by           TEXT,
+			created_by_collab_id INTEGER,
+			created_at           TEXT,
+			updated_at           TEXT,
+			deleted_at           TEXT,
+			updated_seq          BIGINT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_cloud_obs_project ON cloud_observations (project)`,
+		`CREATE INDEX IF NOT EXISTS idx_cloud_obs_status ON cloud_observations (canonical_status)`,
+		`CREATE INDEX IF NOT EXISTS idx_cloud_obs_collab ON cloud_observations (created_by_collab_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_cloud_obs_alive ON cloud_observations (project, canonical_status) WHERE deleted_at IS NULL`,
 	}
 	for _, q := range queries {
 		if _, err := cs.db.ExecContext(ctx, q); err != nil {
@@ -813,6 +838,16 @@ func (cs *CloudStore) InsertMutationBatch(ctx context.Context, batch []MutationE
 			return nil, fmt.Errorf("cloudstore: insert mutation: %w", err)
 		}
 		seqs = append(seqs, seq)
+
+		// Materialize cloud_observations from observation mutations so
+		// visibility filters and dashboard queries don't have to scan
+		// JSONB payload. Errors here are not fatal — the journal is the
+		// source of truth and we can re-materialize from it.
+		if entity == "observation" {
+			if err := upsertCloudObservationFromMutationTx(ctx, tx, seq, project, entityKey, op, payload); err != nil {
+				return nil, fmt.Errorf("cloudstore: materialize observation %s: %w", entityKey, err)
+			}
+		}
 	}
 	for _, chunk := range chunks {
 		if _, err := tx.ExecContext(ctx, `
